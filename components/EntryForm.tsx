@@ -157,9 +157,9 @@ export default function EntryForm({ onAdded }: Props) {
       </div>
 
       {esWhatsApp && (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          WhatsApp no expone metricas publicas. Esta fila se guardara, pero las
-          vistas/reacciones deberas cargarlas manualmente en la master sheet.
+        <p className="mt-3 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-700">
+          Para WhatsApp solo se guarda el link y el nombre (sin metricas).
+          Quedara registrado en el reporte como una publicacion mas.
         </p>
       )}
 

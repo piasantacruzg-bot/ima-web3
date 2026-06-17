@@ -83,13 +83,13 @@ export default function EntriesTable({ entries }: Props) {
                 </a>
               </td>
               <td className={`${td} text-right tabular-nums font-medium`}>
-                {fmt(e.vistas)}
+                {e.redSocial === "WhatsApp" ? "—" : fmt(e.vistas)}
               </td>
               <td className={`${td} text-right tabular-nums`}>
-                {fmt(e.reacciones)}
+                {e.redSocial === "WhatsApp" ? "—" : fmt(e.reacciones)}
               </td>
               <td className={`${td} text-right tabular-nums`}>
-                {fmt(e.suscriptores)}
+                {e.redSocial === "WhatsApp" ? "—" : fmt(e.suscriptores)}
               </td>
               <td className={`${td} text-xs text-slate-400`}>
                 {fmtFecha(e.ultimaActualizacion)}
