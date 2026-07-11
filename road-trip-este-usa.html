@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuaderno de ruta · El Este de EE.UU.</title>
+<meta name="description" content="Planner interactivo de un road trip por el Este de Estados Unidos: mapa vivo, paradas, cine, comida y checklist.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Archivo:wght@400;500;600;700;800&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --paper:#F4ECDD; --paper-2:#EDE2CE; --kraft:#DAC8A8; --kraft-line:#CDB894;
+    --ink:#231D15; --ink-soft:#5A5040; --muted:#847855;
+    --amber:#E4972B; --amber-d:#B9711A;
+    --pine:#1E5F4E; --pine-d:#134A3B;
+    --rose:#CE4E63; --rose-d:#A83450;
+    --denim:#3E6E8E;
+    --card:#FBF6EC; --card-line:#E1D3B8;
+    --tape:rgba(226,205,150,.55);
+    --shadow:26,20,10;
+    --grain:.05;
+    --map-filter:sepia(.28) saturate(.86) contrast(1.02) brightness(1.02);
+    color-scheme:light;
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161E; --paper-2:#191C26; --kraft:#242838; --kraft-line:#333852;
+    --ink:#F1E9D6; --ink-soft:#C3BBA6; --muted:#8D8672;
+    --amber:#F0AA45; --amber-d:#E4972B;
+    --pine:#5FC3A6; --pine-d:#3E9C82;
+    --rose:#F27A90; --rose-d:#D8637C;
+    --denim:#7FB0CE;
+    --card:#1E2130; --card-line:#333852;
+    --tape:rgba(120,110,70,.4);
+    --shadow:0,0,0;
+    --grain:.06;
+    --map-filter:saturate(.72) brightness(.72) contrast(1.05) hue-rotate(-6deg);
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161E; --paper-2:#191C26; --kraft:#242838; --kraft-line:#333852;
+      --ink:#F1E9D6; --ink-soft:#C3BBA6; --muted:#8D8672;
+      --amber:#F0AA45; --amber-d:#E4972B;
+      --pine:#5FC3A6; --pine-d:#3E9C82;
+      --rose:#F27A90; --rose-d:#D8637C;
+      --denim:#7FB0CE;
+      --card:#1E2130; --card-line:#333852;
+      --tape:rgba(120,110,70,.4);
+      --shadow:0,0,0;
+      --grain:.06;
+      --map-filter:saturate(.72) brightness(.72) contrast(1.05) hue-rotate(-6deg);
+      color-scheme:dark;
+    }
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Fraunces',Georgia,serif;font-size:17px;line-height:1.62;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden}
+  /* paper grain */
+  body::before{content:"";position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:var(--grain);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode:multiply}
+  :root[data-theme="dark"] body::before{mix-blend-mode:screen}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body::before{mix-blend-mode:screen}}
+
+  h1,h2,h3,h4{margin:0}
+  a{color:inherit}
+  ::selection{background:var(--amber);color:#231D15}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+  .mono{font-family:'Special Elite',monospace}
+  .util{font-family:'Archivo',sans-serif}
+  .eyebrow{font-family:'Special Elite',monospace;text-transform:uppercase;
+    letter-spacing:.24em;font-size:11.5px;color:var(--amber-d)}
+
+  /* ============ STAMP / TAPE PRIMITIVES ============ */
+  .stamp{font-family:'Special Elite',monospace;text-transform:uppercase;letter-spacing:.14em;
+    font-size:11px;color:var(--rose-d);border:2px solid var(--rose-d);border-radius:6px;
+    padding:5px 9px 4px;display:inline-flex;gap:6px;align-items:center;line-height:1;
+    background:transparent;opacity:.92}
+  .tape{position:absolute;height:26px;background:var(--tape);
+    box-shadow:0 1px 3px rgba(var(--shadow),.14);mix-blend-mode:multiply;pointer-events:none}
+  :root[data-theme="dark"] .tape{mix-blend-mode:screen}
+
+  /* ============ HERO ============ */
+  header.hero{position:relative;padding:34px 0 22px;overflow:hidden}
+  .hero .kick{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
+  .hero .postmark{display:flex;gap:10px;align-items:center}
+  .hero h1{font-family:'Anton',sans-serif;font-weight:400;line-height:.86;
+    font-size:clamp(52px,11vw,132px);letter-spacing:.5px;text-transform:uppercase;
+    margin:.16em 0 .04em;text-wrap:balance}
+  .hero h1 em{font-style:normal;color:var(--amber);position:relative}
+  .hero h1 em::after{content:"";position:absolute;left:-2%;right:-2%;bottom:.06em;height:.14em;
+    background:var(--amber);opacity:.32;border-radius:3px}
+  .hero .lede{font-size:clamp(17px,2.3vw,21px);max-width:60ch;color:var(--ink-soft);margin:.2em 0 0}
+  .hero .lede b{color:var(--ink);font-weight:600}
+
+  .ticketrow{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  .ticket{position:relative;background:var(--card);border:1px solid var(--card-line);
+    border-radius:12px;padding:11px 15px 11px;box-shadow:0 6px 18px -12px rgba(var(--shadow),.5)}
+  .ticket .k{font-family:'Special Elite',monospace;font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted)}
+  .ticket .v{font-family:'Archivo',sans-serif;font-weight:800;font-size:19px;line-height:1.1;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .ticket .v small{font-weight:600;font-size:12px;color:var(--muted)}
+
+  /* theme toggle */
+  .tbtn{font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:.06em;
+    background:var(--card);color:var(--ink);border:1px solid var(--card-line);border-radius:100px;
+    padding:8px 14px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;transition:.16s}
+  .tbtn:hover{border-color:var(--amber);transform:translateY(-1px)}
+
+  /* ============ MAP DASHBOARD ============ */
+  .board{background:var(--paper-2);scroll-margin-top:60px;
+    border-top:1px solid var(--kraft-line);border-bottom:1px solid var(--kraft-line);
+    box-shadow:0 12px 24px -22px rgba(var(--shadow),.7)}
+  .board-grid{display:grid;grid-template-columns:1fr 300px;gap:0}
+  .mapshell{position:relative}
+  #map{height:min(62vh,560px);min-height:380px;width:100%;background:var(--kraft);
+    border-right:1px solid var(--kraft-line)}
+  .leaflet-tile-pane{filter:var(--map-filter)}
+  .leaflet-container{background:var(--kraft);font-family:'Archivo',sans-serif}
+  .leaflet-bar a{background:var(--card);color:var(--ink);border-color:var(--card-line)}
+  .leaflet-bar a:hover{background:var(--paper-2)}
+  .leaflet-popup-content-wrapper{background:var(--card);color:var(--ink);border-radius:12px;
+    box-shadow:0 12px 30px -12px rgba(var(--shadow),.6);border:1px solid var(--card-line)}
+  .leaflet-popup-tip{background:var(--card);border:1px solid var(--card-line)}
+  .leaflet-popup-content{font-family:'Archivo',sans-serif;font-size:13.5px;line-height:1.5;margin:12px 14px}
+  .pop-leg{font-family:'Special Elite',monospace;font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--amber-d)}
+  .pop-film{color:var(--rose-d)}
+  .pop h4{font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin:3px 0 3px}
+  .pop p{margin:0 0 8px;color:var(--ink-soft)}
+  .pop a{display:inline-block;font-weight:700;color:var(--pine);text-decoration:none;font-size:12.5px;
+    border-bottom:2px solid rgba(30,95,78,.25)}
+  .pop .jump{cursor:pointer;color:var(--amber-d);border-bottom-color:rgba(185,113,26,.3);margin-right:12px}
+
+  /* map side panel */
+  .side{padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;min-height:0}
+  .side h3{font-family:'Special Elite',monospace;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted);font-weight:400}
+  .prog{background:var(--card);border:1px solid var(--card-line);border-radius:12px;padding:13px 14px}
+  .prog .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .prog .big{font-family:'Anton',sans-serif;font-size:30px;color:var(--pine);line-height:1;
+    font-variant-numeric:tabular-nums}
+  .prog .of{font-family:'Special Elite',monospace;font-size:12px;color:var(--muted)}
+  .bar{height:9px;border-radius:100px;background:var(--paper-2);overflow:hidden;border:1px solid var(--card-line)}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pine),var(--amber));
+    transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .toggles{display:flex;flex-direction:column;gap:8px}
+  .tg{display:flex;align-items:center;gap:10px;font-family:'Archivo',sans-serif;font-size:13.5px;
+    font-weight:600;cursor:pointer;user-select:none;color:var(--ink)}
+  .tg input{position:absolute;opacity:0;width:0;height:0}
+  .sw{width:34px;height:20px;border-radius:100px;background:var(--kraft);position:relative;
+    transition:.18s;flex:0 0 auto;border:1px solid var(--kraft-line)}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:var(--card);transition:.18s;box-shadow:0 1px 2px rgba(var(--shadow),.4)}
+  .tg input:checked+.sw{background:var(--amber)}
+  .tg.cine input:checked+.sw{background:var(--rose)}
+  .tg input:checked+.sw::after{transform:translateX(14px)}
+  .tg .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+  .tg .dot.r{background:var(--amber);border:2px solid var(--ink)}
+  .tg .dot.f{background:var(--rose);border:2px solid var(--card)}
+  .side .hint{font-family:'Special Elite',monospace;font-size:11px;color:var(--muted);line-height:1.5}
+
+  /* ============ ROUTE NAV (scroll-spy) ============ */
+  .nav{position:sticky;top:0;z-index:590}
+  .navrail{background:var(--ink);color:var(--paper)}
+  :root[data-theme="dark"] .navrail{background:#0C0E15}
+  .navrail .wrap{display:flex;gap:7px;overflow-x:auto;padding:11px 22px;scrollbar-width:none}
+  .navrail .wrap::-webkit-scrollbar{display:none}
+  .navchip{flex:0 0 auto;font-family:'Archivo',sans-serif;font-size:12.5px;font-weight:700;
+    text-decoration:none;color:#E9DFCB;background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);padding:7px 13px;border-radius:100px;
+    white-space:nowrap;transition:.15s;cursor:pointer}
+  .navchip b{color:var(--amber);margin-right:6px;font-family:'Special Elite',monospace}
+  .navchip:hover{background:rgba(255,255,255,.13)}
+  .navchip.active{background:var(--amber);border-color:var(--amber);color:#231D15}
+  .navchip.active b{color:#231D15}
+
+  /* ============ LEGS ============ */
+  main{padding:8px 0 20px}
+  .leg{position:relative;padding:52px 0 46px;border-bottom:1px dashed var(--kraft-line);scroll-margin-top:64px}
+  .leg:last-child{border-bottom:none}
+  .leg-head{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+  .leg-num{font-family:'Anton',sans-serif;font-size:clamp(58px,11vw,104px);line-height:.74;
+    color:var(--amber);flex:0 0 auto;letter-spacing:1px;
+    -webkit-text-stroke:0;text-shadow:3px 3px 0 rgba(var(--shadow),.08)}
+  .leg-head .ht{flex:1 1 260px;min-width:220px}
+  .leg-head h2{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(28px,5vw,46px);
+    letter-spacing:.4px;line-height:.98;text-transform:uppercase;text-wrap:balance}
+  .leg .road{font-family:'Special Elite',monospace;font-size:12.5px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.1em;margin-top:9px;display:flex;align-items:center;gap:9px}
+  .leg .road .shield{background:var(--pine);color:#fff;font-family:'Archivo',sans-serif;font-weight:800;
+    font-size:11px;letter-spacing:.02em;padding:2px 8px;border-radius:5px}
+  .locate{font-family:'Archivo',sans-serif;font-weight:700;font-size:12.5px;cursor:pointer;
+    background:var(--card);color:var(--ink);border:1px solid var(--card-line);border-radius:100px;
+    padding:9px 15px;display:inline-flex;gap:8px;align-items:center;transition:.16s;align-self:center}
+  .locate:hover{border-color:var(--amber);background:var(--paper-2);transform:translateY(-1px)}
+  .locate.on{background:var(--amber);border-color:var(--amber);color:#231D15}
+
+  /* collage grid of cards */
+  .cards{margin-top:30px;column-gap:20px;columns:2}
+  @media(max-width:760px){.cards{columns:1}}
+  .card{break-inside:avoid;margin:0 0 20px;position:relative;background:var(--card);
+    border:1px solid var(--card-line);border-radius:14px;padding:18px 18px 16px;
+    box-shadow:0 14px 30px -20px rgba(var(--shadow),.55)}
+  .card.tilt-l{transform:rotate(-.7deg)} .card.tilt-r{transform:rotate(.7deg)}
+  .card:hover{transform:rotate(0) translateY(-2px);transition:transform .2s}
+  .card .cnum{font-family:'Special Elite',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em}
+  .card h3{font-family:'Fraunces',serif;font-weight:600;font-size:20px;line-height:1.15;margin:5px 0 6px;
+    display:flex;gap:9px;align-items:flex-start}
+  .card h3 .chk{flex:0 0 auto;margin-top:3px}
+  .card p{margin:0 0 12px;color:var(--ink-soft);font-size:16px}
+  .links{display:flex;flex-wrap:wrap;gap:7px}
+  .lk{font-family:'Archivo',sans-serif;font-size:11.5px;font-weight:700;text-decoration:none;
+    color:var(--ink);background:var(--paper);border:1px solid var(--card-line);border-radius:100px;
+    padding:5px 11px;transition:.14s;display:inline-flex;gap:5px;align-items:center}
+  .lk:hover{background:var(--paper-2);border-color:var(--kraft-line)}
+  .lk.map{border-color:rgba(228,151,43,.5)} .lk.web{border-color:rgba(30,95,78,.4);color:var(--pine)}
+
+  /* checkbox */
+  .chk{appearance:none;-webkit-appearance:none;width:19px;height:19px;border-radius:5px;
+    border:2px solid var(--kraft-line);background:var(--paper);cursor:pointer;position:relative;transition:.14s}
+  .chk:hover{border-color:var(--pine)}
+  .chk:checked{background:var(--pine);border-color:var(--pine)}
+  .chk:checked::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;
+    border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(42deg)}
+  .chk:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .card.done{opacity:.62}
+  .card.done h3{text-decoration:line-through;text-decoration-color:var(--muted);text-decoration-thickness:1.5px}
+
+  /* film strip card */
+  .film{break-inside:avoid;margin:0 0 20px;position:relative;background:var(--ink);color:var(--paper);
+    border-radius:14px;padding:16px 18px 18px;box-shadow:0 16px 34px -18px rgba(var(--shadow),.6)}
+  :root[data-theme="dark"] .film{background:#0C0E15;border:1px solid #262a3a}
+  .film::before,.film::after{content:"";position:absolute;left:0;right:0;height:14px;
+    background:repeating-linear-gradient(90deg,transparent 0 8px,var(--paper) 8px 14px);
+    opacity:.16}
+  .film::before{top:0;border-radius:14px 14px 0 0} .film::after{bottom:0;border-radius:0 0 14px 14px}
+  .film .tag{font-family:'Special Elite',monospace;font-weight:400;text-transform:uppercase;
+    letter-spacing:.16em;font-size:11px;color:var(--rose);display:flex;align-items:center;gap:8px;margin:6px 0 2px}
+  .film ul{margin:12px 0 2px;padding:0;list-style:none;display:grid;gap:12px}
+  .film li{font-size:15.5px;line-height:1.5;color:#EDE3CF}
+  .film li b{color:#fff;font-weight:600}
+  .film li i{color:var(--amber);font-style:italic}
+  .film a{color:var(--rose);font-weight:700;text-decoration:none;font-family:'Archivo',sans-serif;
+    font-size:11.5px;letter-spacing:.02em;border-bottom:2px solid rgba(206,78,99,.35);margin-left:5px}
+
+  /* eat block */
+  .eat{margin-top:2px;background:var(--paper-2);border:1px dashed var(--kraft-line);border-radius:14px;
+    padding:16px 18px;break-inside:avoid}
+  .eat .tag{font-family:'Special Elite',monospace;text-transform:uppercase;letter-spacing:.16em;
+    font-size:11px;color:var(--pine);display:flex;align-items:center;gap:8px}
+  .meal{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px dotted var(--kraft-line)}
+  .meal:first-of-type{border-top:none;margin-top:8px;padding-top:2px}
+  .badge{flex:0 0 auto;font-size:20px;line-height:1.2;filter:saturate(1.05)}
+  .meal .m-txt{font-size:15.5px;color:var(--ink-soft)}
+  .meal .m-txt b{color:var(--ink);font-weight:600}
+  .meal a{color:var(--pine);font-weight:700;text-decoration:none;font-family:'Archivo',sans-serif;font-size:12px}
+
+  /* tip note */
+  .tip{margin-top:20px;position:relative;background:var(--amber);color:#2A1E08;border-radius:12px;
+    padding:16px 18px 15px;box-shadow:0 12px 26px -16px rgba(184,113,26,.7);break-inside:avoid;
+    transform:rotate(-.5deg)}
+  .tip b{font-family:'Special Elite',monospace;font-weight:400;text-transform:uppercase;
+    font-size:11px;letter-spacing:.14em;color:#6E4A10;display:block;margin-bottom:5px}
+  .tip .txt{font-size:15.5px;line-height:1.5;font-weight:500}
+
+  .colwrap{display:grid;grid-template-columns:1fr;gap:20px;margin-top:8px}
+
+  /* ============ FOOTER ============ */
+  footer{background:var(--ink);color:var(--paper);padding:52px 0 68px;margin-top:12px;position:relative;overflow:hidden}
+  :root[data-theme="dark"] footer{background:#0C0E15}
+  footer .fh{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;
+    font-size:clamp(30px,6vw,58px);color:var(--amber);letter-spacing:.5px;line-height:.9;text-wrap:balance}
+  footer .cols{display:grid;grid-template-columns:1.2fr 1fr;gap:26px;margin-top:26px}
+  @media(max-width:720px){footer .cols{grid-template-columns:1fr}}
+  footer .eyebrow{color:var(--amber)}
+  footer ul{margin:12px 0 0;padding-left:18px;color:#E4DAC6}
+  footer li{margin:9px 0;line-height:1.5}
+  footer .mix{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);
+    border-radius:16px;padding:20px 22px;position:relative}
+  footer .mix .stamp{position:absolute;top:-14px;right:16px;background:var(--ink);transform:rotate(6deg)}
+  :root[data-theme="dark"] footer .mix .stamp{background:#0C0E15}
+  footer .mix p{color:#E4DAC6}
+  footer .mix i{color:var(--amber);font-style:italic}
+  footer .fine{color:#8f897a;font-family:'Special Elite',monospace;font-size:11px;margin-top:30px;line-height:1.6}
+
+  @media(max-width:900px){
+    .board-grid{grid-template-columns:1fr}
+    #map{border-right:none;border-bottom:1px solid var(--kraft-line);height:52vh}
+    .side{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+    .side .prog{flex:1 1 220px} .side .toggles{flex:1 1 200px}
+  }
+  @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap">
+    <div class="kick">
+      <div class="postmark">
+        <span class="stamp">✦ Viajera sola</span>
+        <span class="stamp" style="color:var(--pine);border-color:var(--pine)">Loop · sin repetir ruta</span>
+      </div>
+      <button class="tbtn" id="theme" aria-label="Cambiar tema">
+        <span id="themeIcon">☾</span><span id="themeLabel">Modo noche</span>
+      </button>
+    </div>
+    <p class="eyebrow" style="margin-top:18px">Cuaderno de ruta · Costa Este de EE.UU.</p>
+    <h1>Miami a<br><em>New England</em><br>y de vuelta</h1>
+    <p class="lede">Un <b>road trip en carro propio</b> por el Este: lo icónico, lo histórico, las rarezas de carretera y las locaciones de cine. Casa gratis en <b>Atlanta</b> y <b>New Hampshire</b>. Arranca abajo tocando el mapa.</p>
+
+    <div class="ticketrow">
+      <div class="ticket"><div class="k">Paradas</div><div class="v" id="statStops">20 <small>lugares</small></div></div>
+      <div class="ticket"><div class="k">Tramos</div><div class="v">9 <small>legs</small></div></div>
+      <div class="ticket"><div class="k">Locaciones de cine</div><div class="v">8 <small>🎬</small></div></div>
+      <div class="ticket"><div class="k">Forma del viaje</div><div class="v">Loop <small>ida ≠ vuelta</small></div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ MAP DASHBOARD ============ -->
+<section class="board" id="dash">
+  <div class="board-grid">
+    <div class="mapshell">
+      <div id="map"></div>
+    </div>
+    <aside class="side">
+      <div>
+        <h3>Tu progreso</h3>
+        <div class="prog">
+          <div class="top">
+            <span><span class="big" id="pDone">0</span><span class="of" id="pOf"> / 20 paradas</span></span>
+            <span class="of" id="pPct">0%</span>
+          </div>
+          <div class="bar"><i id="pBar"></i></div>
+        </div>
+      </div>
+      <div>
+        <h3>Capas del mapa</h3>
+        <div class="toggles">
+          <label class="tg"><input type="checkbox" id="tRoute" checked><span class="sw"></span>
+            <span class="dot r"></span> Paradas de la ruta</label>
+          <label class="tg cine"><input type="checkbox" id="tFilm" checked><span class="sw"></span>
+            <span class="dot f"></span> Locaciones de cine 🎬</label>
+          <label class="tg"><input type="checkbox" id="tFollow" checked><span class="sw"></span>
+            🧭 Seguir mi scroll</label>
+        </div>
+      </div>
+      <p class="hint">Toca un pin para ver el detalle y saltar a ese tramo. El mapa se centra solo en el tramo que estás leyendo.</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="navrail">
+    <div class="wrap" id="navrail">
+      <a class="navchip" data-goto="l1"><b>01</b>Miami→Atlanta</a>
+      <a class="navchip" data-goto="l2"><b>02</b>Atlanta</a>
+      <a class="navchip" data-goto="l3"><b>03</b>Montañas→Asheville</a>
+      <a class="navchip" data-goto="l4"><b>04</b>Shenandoah→DC</a>
+      <a class="navchip" data-goto="l5"><b>05</b>Washington DC</a>
+      <a class="navchip" data-goto="l6"><b>06</b>Filadelfia</a>
+      <a class="navchip" data-goto="l7"><b>07</b>Nueva York</a>
+      <a class="navchip" data-goto="l8"><b>08</b>New England</a>
+      <a class="navchip" data-goto="l9"><b>09</b>La costa de vuelta</a>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- 1 -->
+  <section class="leg" id="l1" data-leg="1">
+    <div class="leg-head">
+      <span class="leg-num">01</span>
+      <div class="ht">
+        <p class="eyebrow">Tramo · el arranque</p>
+        <h2>Miami → Atlanta</h2>
+        <p class="road"><span class="shield">I-75</span> por el interior de Florida</p>
+      </div>
+      <button class="locate" data-focus="1">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · FL</div>
+        <h3><input type="checkbox" class="chk" data-id="cassadaga"> Cassadaga, la capital psíquica</h3>
+        <p>Pueblo de médiums espiritualistas desde 1894. Rarísimo y fotogénico.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Cassadaga+Florida" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Cassadaga+Florida+spiritualist" target="_blank" rel="noopener">📷 Fotos</a><a class="lk" href="https://www.youtube.com/results?search_query=Cassadaga+Florida+psychic+town" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · OCALA</div>
+        <h3><input type="checkbox" class="chk" data-id="silver"> Silver Springs</h3>
+        <p>Botes de fondo de vidrio y monos salvajes en la orilla (escaparon de un set de cine hace décadas).</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Silver+Springs+State+Park+Ocala" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Silver+Springs+Ocala+monkeys" target="_blank" rel="noopener">📷 Fotos</a><a class="lk" href="https://www.youtube.com/results?search_query=Silver+Springs+Ocala+wild+monkeys" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · MACON, GA</div>
+        <h3><input type="checkbox" class="chk" data-id="macon"> Cuna del soul sureño</h3>
+        <p>Casa-museo de los Allman Brothers ("The Big House"), estatua de Otis Redding, tierra de Little Richard.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Allman+Brothers+Big+House+Macon" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Macon+Georgia+music" target="_blank" rel="noopener">📷 Fotos</a><a class="lk" href="https://www.youtube.com/results?search_query=Macon+Georgia+Allman+Brothers+Big+House" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer</p>
+        <div class="meal"><span class="badge">🍳</span><div class="m-txt"><b>H&amp;H Soul Food (Macon)</b> — desde 1959, donde comían los Allman Brothers. Pide los "Soul Rolls". 7am–3pm. <a href="https://www.google.com/maps/search/?api=1&query=H%26H+Soul+Food+Macon" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip de ruta</b><span class="txt">Sal de Miami la noche del 10 y duerme cerca de Ocala/Gainesville. Macon cae perfecto para almorzar antes de llegar a Atlanta.</span></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="leg" id="l2" data-leg="2">
+    <div class="leg-head">
+      <span class="leg-num">02</span>
+      <div class="ht">
+        <p class="eyebrow">Base · casa de tu amiga</p>
+        <h2>Atlanta</h2>
+        <p class="road">🎬 El "Hollywood del Sur"</p>
+      </div>
+      <button class="locate" data-focus="2">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · ATL</div>
+        <h3><input type="checkbox" class="chk" data-id="mlk"> MLK National Historical Park</h3>
+        <p>Casa natal e iglesia Ebenezer de Martin Luther King. Profundo.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=MLK+National+Historical+Park+Atlanta" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=MLK+National+Historical+Park+Atlanta" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · ATL</div>
+        <h3><input type="checkbox" class="chk" data-id="beltline"> BeltLine + Doll's Head Trail</h3>
+        <p>Sendero urbano de murales; y un sendero de arte hecho con objetos encontrados en un bosque.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Atlanta+BeltLine+Eastside+Trail" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Dolls+Head+Trail+Atlanta" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="film">
+        <p class="tag">🎬 Cine y cultura pop</p>
+        <ul>
+          <li><b>Senoia (~1h)</b> — el pueblo de <i>The Walking Dead</i>. Camina el set y entra al "Woodbury Shoppe". <a href="https://www.youtube.com/results?search_query=Senoia+Georgia+Walking+Dead+tour" target="_blank" rel="noopener">▶ video</a></li>
+          <li><b>Gwinnett Place Mall</b> — el "Starcourt Mall" de <i>Stranger Things</i>. <a href="https://www.google.com/search?tbm=isch&q=Gwinnett+Place+Mall+Stranger+Things" target="_blank" rel="noopener">📷 fotos</a></li>
+        </ul>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer</p>
+        <div class="meal"><span class="badge">🍳</span><div class="m-txt"><b>Ria's Bluebird</b> — brunch sureño querido por los locales. <a href="https://www.google.com/maps/search/?api=1&query=Rias+Bluebird+Atlanta" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🍽️</span><div class="m-txt"><b>Busy Bee Cafe</b> — soul food histórico. <a href="https://www.google.com/maps/search/?api=1&query=Busy+Bee+Cafe+Atlanta" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🌙</span><div class="m-txt"><b>Ponce City Market</b> — mercado gastronómico para cenar variado. <a href="https://www.google.com/maps/search/?api=1&query=Ponce+City+Market+Atlanta" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip de ruta</b><span class="txt">Atlanta merece 2-3 días. Con la casa de tu amiga como base, mete un day trip a Senoia, a Chattanooga (~2h) o a Tallulah Gorge.</span></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="leg" id="l3" data-leg="3">
+    <div class="leg-head">
+      <span class="leg-num">03</span>
+      <div class="ht">
+        <p class="eyebrow">Tramo · las montañas</p>
+        <h2>Atlanta → Asheville</h2>
+        <p class="road"><span class="shield">BRP</span> Blue Ridge Parkway</p>
+      </div>
+      <button class="locate" data-focus="3">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-r">
+        <div class="cnum">PARQUE NACIONAL</div>
+        <h3><input type="checkbox" class="chk" data-id="smoky"> Great Smoky Mountains</h3>
+        <p>El parque nacional más visitado de EE.UU. Maneja el loop de Cades Cove (osos, venados, cabañas).</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Cades+Cove+Great+Smoky+Mountains" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Cades+Cove+Smoky+Mountains" target="_blank" rel="noopener">📷 Fotos</a><a class="lk" href="https://www.youtube.com/results?search_query=Cades+Cove+Smoky+Mountains+drive" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="card tilt-l">
+        <div class="cnum">MANEJO ESCÉNICO</div>
+        <h3><input type="checkbox" class="chk" data-id="brp"> Blue Ridge Parkway</h3>
+        <p>El manejo escénico más famoso del país. Toma un tramo, no lo fuerces entero (va a 45 mph).</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Blue+Ridge+Parkway" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Blue+Ridge+Parkway+overlook" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · ASHEVILLE</div>
+        <h3><input type="checkbox" class="chk" data-id="biltmore"> Biltmore Estate</h3>
+        <p>La casa privada más grande de EE.UU.</p>
+        <div class="links"><a class="lk web" href="https://www.biltmore.com" target="_blank" rel="noopener">🌐 Web</a><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Biltmore+Estate+Asheville" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Biltmore+Estate+Asheville" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="film">
+        <p class="tag">🎬 Cine y cultura pop</p>
+        <ul>
+          <li><b>DuPont State Forest</b> — las cascadas de <i>Los Juegos del Hambre</i> (el "Distrito 12"). <a href="https://www.youtube.com/results?search_query=DuPont+State+Forest+Hunger+Games+filming" target="_blank" rel="noopener">▶ video</a></li>
+          <li><b>Chimney Rock</b> — locación de <i>El último mohicano</i>. Y <b>Lake Lure</b>, donde filmaron <i>Dirty Dancing</i>. <a href="https://www.youtube.com/results?search_query=Lake+Lure+Dirty+Dancing+filming" target="_blank" rel="noopener">▶ video</a></li>
+        </ul>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer · Asheville</p>
+        <div class="meal"><span class="badge">🍳</span><div class="m-txt"><b>Biscuit Head</b> — biscuits gigantes con barra de mermeladas y mantequillas. <a href="https://www.google.com/maps/search/?api=1&query=Biscuit+Head+Asheville" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🍽️</span><div class="m-txt"><b>Huli Sue's BBQ</b> (4.8★, BBQ hawaiano) o <b>Iron and Oak Brisket</b> (4.8★). <a href="https://www.google.com/maps/search/?api=1&query=Huli+Sues+BBQ+Asheville" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="leg" id="l4" data-leg="4">
+    <div class="leg-head">
+      <span class="leg-num">04</span>
+      <div class="ht">
+        <p class="eyebrow">Tramo · Virginia</p>
+        <h2>Asheville → Shenandoah → DC</h2>
+        <p class="road"><span class="shield">Skyline Dr</span> valle y cavernas</p>
+      </div>
+      <button class="locate" data-focus="4">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · VA</div>
+        <h3><input type="checkbox" class="chk" data-id="luray"> Luray Caverns</h3>
+        <p>Cavernas con el "Great Stalacpipe Organ": un órgano que suena tocando estalactitas.</p>
+        <div class="links"><a class="lk web" href="https://luraycaverns.com" target="_blank" rel="noopener">🌐 Web</a><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Luray+Caverns+Virginia" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.youtube.com/results?search_query=Luray+Caverns+Stalacpipe+Organ" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · SHENANDOAH</div>
+        <h3><input type="checkbox" class="chk" data-id="skyline"> Natural Bridge + Skyline Drive</h3>
+        <p>Un arco de roca de 65 m que midió George Washington, y 170 km de carretera panorámica por la cresta.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Skyline+Drive+Shenandoah" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Skyline+Drive+Shenandoah" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · CHARLOTTESVILLE</div>
+        <h3><input type="checkbox" class="chk" data-id="monticello"> Monticello</h3>
+        <p>La casa de Thomas Jefferson.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Monticello+Charlottesville" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Monticello+Charlottesville" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip de ruta</b><span class="txt">Los memoriales de DC de noche, iluminados, son el momento más emotivo del viaje. Llega a la ciudad con luz y déjalos para la caída de la tarde.</span></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="leg" id="l5" data-leg="5">
+    <div class="leg-head">
+      <span class="leg-num">05</span>
+      <div class="ht">
+        <p class="eyebrow">2-3 días · la capital</p>
+        <h2>Washington DC</h2>
+        <p class="road">Museos gratis · memoriales de noche</p>
+      </div>
+      <button class="locate" data-focus="5">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · DC</div>
+        <h3><input type="checkbox" class="chk" data-id="smithsonian"> Museos Smithsonian</h3>
+        <p>Todos gratis: Aire y Espacio, Historia Natural, Museo Afroamericano.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Smithsonian+National+Mall" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Smithsonian+museums+Washington+DC" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · DC</div>
+        <h3><input type="checkbox" class="chk" data-id="mall"> National Mall + memoriales de noche</h3>
+        <p>Lincoln, Vietnam, MLK, iluminados. Georgetown y The Wharf para pasear junto al agua.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=National+Mall+Washington+DC" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.youtube.com/results?search_query=National+Mall+memorials+night" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer</p>
+        <div class="meal"><span class="badge">🌭</span><div class="m-txt"><b>Ben's Chili Bowl</b> — desde 1958, ícono de los derechos civiles. Pide el "half-smoke". Obama comió aquí. <a href="https://www.google.com/maps/search/?api=1&query=Ben%27s+Chili+Bowl+Washington+DC" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🍳</span><div class="m-txt"><b>Eastern Market</b> — brunch de fin de semana. <a href="https://www.google.com/maps/search/?api=1&query=Eastern+Market+Washington+DC" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip viajera sola</b><span class="txt">Parquea el carro y muévete en metro; DC se camina y es muy amigable para andar sola.</span></div>
+  </section>
+
+  <!-- 6 -->
+  <section class="leg" id="l6" data-leg="6">
+    <div class="leg-head">
+      <span class="leg-num">06</span>
+      <div class="ht">
+        <p class="eyebrow">Tramo · muy de películas</p>
+        <h2>Filadelfia</h2>
+        <p class="road">🎬 Rocky, cheesesteaks, murales</p>
+      </div>
+      <button class="locate" data-focus="6">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="film">
+        <p class="tag">🎬 Cine y cultura pop</p>
+        <ul>
+          <li><b>Rocky Steps + estatua de Rocky</b> (Museo de Arte) — súbelas corriendo. <a href="https://www.youtube.com/results?search_query=Rocky+Steps+Philadelphia" target="_blank" rel="noopener">▶ video</a></li>
+          <li><b>Paddy's Pub</b> — el bar real de <i>It's Always Sunny in Philadelphia</i>. <a href="https://www.google.com/search?tbm=isch&q=Its+Always+Sunny+Paddys+Pub+Philadelphia" target="_blank" rel="noopener">📷 fotos</a></li>
+          <li><b>Independence Hall + Campana de la Libertad</b> — historia real y de <i>National Treasure</i>. <a href="https://www.google.com/maps/search/?api=1&query=Independence+Hall+Philadelphia" target="_blank" rel="noopener">📍 mapa</a></li>
+          <li><b>Magic Gardens</b> — mosaicos que cubren toda una cuadra. <a href="https://www.google.com/search?tbm=isch&q=Philadelphia+Magic+Gardens" target="_blank" rel="noopener">📷 fotos</a></li>
+        </ul>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer</p>
+        <div class="meal"><span class="badge">🥪</span><div class="m-txt"><b>Reading Terminal Market</b> — mercado histórico con de todo. <a href="https://www.google.com/maps/search/?api=1&query=Reading+Terminal+Market+Philadelphia" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🌙</span><div class="m-txt"><b>Shay's Steaks</b> (ganador del cheesesteak 2026) o <b>Dalessandro's</b> (clásico, solo efectivo). <a href="https://www.google.com/maps/search/?api=1&query=Shays+Steaks+Philadelphia" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip de ruta</b><span class="txt">De Filadelfia a Nueva York son solo ~2h; entras de lleno a la ciudad.</span></div>
+  </section>
+
+  <!-- 7 -->
+  <section class="leg" id="l7" data-leg="7">
+    <div class="leg-head">
+      <span class="leg-num">07</span>
+      <div class="ht">
+        <p class="eyebrow">Entra de lleno · sin carro</p>
+        <h2>Nueva York</h2>
+        <p class="road">Deja el carro, usa el metro</p>
+      </div>
+      <button class="locate" data-focus="7">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · NYC</div>
+        <h3><input type="checkbox" class="chk" data-id="nyc-iconic"> Lo icónico</h3>
+        <p>Central Park, vistas desde Top of the Rock o The Edge, el Puente de Brooklyn a pie al atardecer, y la High Line.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Brooklyn+Bridge" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Brooklyn+Bridge+sunset" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · NYC</div>
+        <h3><input type="checkbox" class="chk" data-id="911"> Memorial y Museo del 9/11</h3>
+        <p>Silencioso y potente. Y "Little Island", un parque flotante sobre el río Hudson.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=9%2F11+Memorial+New+York" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=9+11+Memorial+New+York" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="film">
+        <p class="tag">🎬 Cine y cultura pop</p>
+        <ul>
+          <li><b>Edificio de Friends</b> (90 Bedford St) — el exterior del depa de Monica. <a href="https://www.google.com/maps/search/?api=1&query=Friends+apartment+90+Bedford+St+New+York" target="_blank" rel="noopener">📍 mapa</a></li>
+          <li><b>Estación de Ghostbusters</b> (Hook &amp; Ladder 8, Tribeca). <a href="https://www.google.com/search?tbm=isch&q=Ghostbusters+firehouse+New+York" target="_blank" rel="noopener">📷 fotos</a></li>
+          <li><b>Tom's Restaurant</b> — el "Monk's" de <i>Seinfeld</i>. Y el escalón de Carrie (<i>Sex and the City</i>) en Perry St.</li>
+        </ul>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer</p>
+        <div class="meal"><span class="badge">🥯</span><div class="m-txt"><b>Ess-a-Bagel</b> — el bagel con cream cheese como debe ser (desde las 6am). <a href="https://www.google.com/maps/search/?api=1&query=Ess-a-Bagel+New+York" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🥪</span><div class="m-txt"><b>Katz's Delicatessen</b> — desde 1888, el pastrami de <i>When Harry Met Sally</i>. <a href="https://www.google.com/maps/search/?api=1&query=Katz%27s+Delicatessen+New+York" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🍕</span><div class="m-txt"><b>Joe's Pizza (Village)</b> — la slice de <i>Spider-Man 2</i>, hasta la madrugada. Postre: <b>Levain Bakery</b>. <a href="https://www.google.com/maps/search/?api=1&query=Joe%27s+Pizza+Carmine+St+New+York" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip viajera sola</b><span class="txt">No manejes en Manhattan. Deja el carro en un garaje (o del lado de New Jersey) y muévete en metro, que corre toda la noche. Ruta: Filadelfia → NYC (~2h) → New Hampshire (~4.5h).</span></div>
+  </section>
+
+  <!-- 8 -->
+  <section class="leg" id="l8" data-leg="8">
+    <div class="leg-head">
+      <span class="leg-num">08</span>
+      <div class="ht">
+        <p class="eyebrow">Base · casa de tu amiga</p>
+        <h2>New England</h2>
+        <p class="road">NH · Maine · Boston · Salem</p>
+      </div>
+      <button class="locate" data-focus="8">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · NH</div>
+        <h3><input type="checkbox" class="chk" data-id="nh"> New Hampshire</h3>
+        <p>La Kancamagus Highway y Franconia Notch (el Flume Gorge). Mount Washington, el pico más alto del noreste. Portsmouth, puerto colonial.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Kancamagus+Highway" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.youtube.com/results?search_query=Kancamagus+Highway+drive" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · ME · RI · VT</div>
+        <h3><input type="checkbox" class="chk" data-id="maine"> Maine · Newport · Vermont</h3>
+        <p>Portland (meca del lobster roll) y Acadia si hay tiempo. Newport RI (mansiones de la Edad Dorada). Stowe/Woodstock VT (puentes cubiertos, Ben &amp; Jerry's).</p>
+        <div class="links"><a class="lk" href="https://www.google.com/search?tbm=isch&q=Acadia+National+Park+Maine" target="_blank" rel="noopener">📷 Acadia</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=The+Breakers+Newport" target="_blank" rel="noopener">📷 Newport</a></div>
+      </div>
+      <div class="film">
+        <p class="tag">🎬 Cine y cultura pop</p>
+        <ul>
+          <li><b>Salem, MA</b> — el pueblo de <i>Hocus Pocus</i> (la casa de las hermanas Sanderson) + historia de brujas. <a href="https://www.youtube.com/results?search_query=Hocus+Pocus+filming+locations+Salem" target="_blank" rel="noopener">▶ video</a></li>
+          <li><b>Boston</b> — la banca de <i>Good Will Hunting</i> en el Public Garden + el Freedom Trail.</li>
+          <li><b>Martha's Vineyard</b> (si vas a Cape Cod) — la isla "Amity" de <i>Tiburón</i>.</li>
+        </ul>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer</p>
+        <div class="meal"><span class="badge">🦞</span><div class="m-txt"><b>The Highroller Lobster Co (Portland)</b> — prueba el "flight" de lobster rolls. O <b>Luke's Lobster</b> junto al muelle. <a href="https://www.google.com/maps/search/?api=1&query=Highroller+Lobster+Portland+Maine" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip de ruta</b><span class="txt">Aquí es donde más puedes soltarte con la casa gratis. En 5-7 días haces NH + Maine + Boston + Salem tranquila.</span></div>
+  </section>
+
+  <!-- 9 -->
+  <section class="leg" id="l9" data-leg="9">
+    <div class="leg-head">
+      <span class="leg-num">09</span>
+      <div class="ht">
+        <p class="eyebrow">La bajada · todo nuevo</p>
+        <h2>Por la costa a Miami</h2>
+        <p class="road"><span class="shield">I-95</span> playas y sur profundo</p>
+      </div>
+      <button class="locate" data-focus="9">🗺️ Enfocar tramo</button>
+    </div>
+    <div class="cards">
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · VA</div>
+        <h3><input type="checkbox" class="chk" data-id="chincoteague"> Bridge-Tunnel + Assateague</h3>
+        <p>28 km de puente-túnel sobre y bajo el mar, camino a los caballos salvajes que caminan por la playa en Assateague/Chincoteague.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Assateague+Island+wild+ponies" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Assateague+wild+ponies+beach" target="_blank" rel="noopener">📷 Fotos</a><a class="lk" href="https://www.youtube.com/results?search_query=Chesapeake+Bay+Bridge+Tunnel+drive" target="_blank" rel="noopener">▶️ Video</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · NC</div>
+        <h3><input type="checkbox" class="chk" data-id="obx"> Outer Banks</h3>
+        <p>Las dunas de Jockey's Ridge al atardecer y el faro rayado de Cape Hatteras (el de ladrillo más alto de EE.UU.).</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Jockey%27s+Ridge+State+Park" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Cape+Hatteras+Lighthouse" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · DILLON, SC</div>
+        <h3><input type="checkbox" class="chk" data-id="sotb"> South of the Border</h3>
+        <p>Templo del kitsch en la I-95: "Pedro" gigante y torre-sombrero con ascensor de vidrio.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=South+of+the+Border+Dillon+SC" target="_blank" rel="noopener">📍 Mapa</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=South+of+the+Border+Dillon+Pedro" target="_blank" rel="noopener">📷 Fotos</a></div>
+      </div>
+      <div class="card tilt-l">
+        <div class="cnum">PARADA · CHARLESTON · SAVANNAH · ST. AUGUSTINE</div>
+        <h3><input type="checkbox" class="chk" data-id="angeloak"> Robles, cementerios y castillos</h3>
+        <p>Un roble de 400-500 años (Charleston), el cementerio más atmosférico del sur (Savannah), y el Castillo de San Marcos en la ciudad más antigua de EE.UU.</p>
+        <div class="links"><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Angel+Oak+Tree+Charleston" target="_blank" rel="noopener">📍 Angel Oak</a><a class="lk" href="https://www.google.com/search?tbm=isch&q=Castillo+de+San+Marcos+St+Augustine" target="_blank" rel="noopener">📷 St. Augustine</a></div>
+      </div>
+      <div class="card tilt-r">
+        <div class="cnum">PARADA · EL CIERRE</div>
+        <h3><input type="checkbox" class="chk" data-id="ksc"> Kennedy Space Center + Coral Castle</h3>
+        <p>Cohetes e historia de la Luna (Titusville), y un castillo de coral que un hombre esculpió a mano por un amor perdido (Homestead). Cierre perfecto antes de Miami.</p>
+        <div class="links"><a class="lk web" href="https://www.kennedyspacecenter.com" target="_blank" rel="noopener">🌐 Web</a><a class="lk map" href="https://www.google.com/maps/search/?api=1&query=Coral+Castle+Homestead" target="_blank" rel="noopener">📍 Coral Castle</a></div>
+      </div>
+      <div class="film">
+        <p class="tag">🎬 Cine y cultura pop</p>
+        <ul>
+          <li><b>Forrest Gump</b> — la banca de Chippewa Square en <b>Savannah</b> ("la vida es como una caja de chocolates"). <a href="https://www.google.com/search?tbm=isch&q=Forrest+Gump+bench+Chippewa+Square+Savannah" target="_blank" rel="noopener">📷 fotos</a></li>
+          <li><b>The Notebook</b> — Cypress Gardens (la escena del bote) y Boone Hall, cerca de <b>Charleston</b>. <a href="https://www.youtube.com/results?search_query=The+Notebook+Cypress+Gardens+filming" target="_blank" rel="noopener">▶ video</a></li>
+          <li><b>Daytona Beach</b> — puedes manejar tu carro EN la playa; cuna del NASCAR.</li>
+        </ul>
+      </div>
+      <div class="eat">
+        <p class="tag">🍴 Dónde comer · el sur profundo</p>
+        <div class="meal"><span class="badge">🦐</span><div class="m-txt"><b>Charleston:</b> Poogan's Porch (shrimp &amp; grits). 🌙 Lowland (lowcountry moderno, 4.7★). <a href="https://www.google.com/maps/search/?api=1&query=Poogans+Porch+Charleston" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🍗</span><div class="m-txt"><b>Savannah:</b> Mrs. Wilkes' (almuerzo sureño comunal desde 1943, solo 11–2). 🌙 The Olde Pink House. <a href="https://www.google.com/maps/search/?api=1&query=Mrs+Wilkes+Dining+Room+Savannah" target="_blank" rel="noopener">📍</a></div></div>
+        <div class="meal"><span class="badge">🌙</span><div class="m-txt"><b>St. Augustine:</b> Harry's Seafood (cajún, 4.6★) o Prohibition Kitchen (gastropub con música en vivo). <a href="https://www.google.com/maps/search/?api=1&query=Harry%27s+Seafood+St+Augustine" target="_blank" rel="noopener">📍</a></div></div>
+      </div>
+    </div>
+    <div class="tip"><b>✎ Tip de ruta</b><span class="txt">Charleston, Savannah y St. Augustine están cerca entre sí; encadénalas en 3-4 días de buena comida y casco histórico.</span></div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <p class="eyebrow">Antes de arrancar</p>
+    <h2 class="fh">Empaca el carro,<br>arma el mixtape,<br>sal con luz.</h2>
+    <div class="cols">
+      <div>
+        <p class="eyebrow" style="margin-top:6px">Viajar sola, tranquila</p>
+        <ul>
+          <li>Maneja los tramos largos de día; llega con luz a lugares nuevos.</li>
+          <li>Comparte ubicación en vivo y haz check-in diario con tus amigas.</li>
+          <li>Hoteles con reseñas de parqueo iluminado y pasillos interiores.</li>
+          <li>No bajes del ¼ de tanque en zonas rurales de GA y las Carolinas.</li>
+          <li>AAA (~$60/año): asistencia en carretera + descuentos en hotel.</li>
+          <li>Descarga mapas offline de las Smokies y las White Mountains.</li>
+        </ul>
+      </div>
+      <div class="mix">
+        <span class="stamp">🎧 Side A</span>
+        <p style="margin:.4em 0 0"><b style="color:#fff">El mixtape.</b> Como en <i>Elizabethtown</i>: arma la banda sonora antes de salir. Soul de Macon (Otis Redding, Allman Brothers), Tom Petty para la carretera abierta, folk para las montañas y algo de la peli. <b style="color:var(--amber)">Se puede armar en Spotify cuando quieras.</b></p>
+      </div>
+    </div>
+    <p class="fine">Distancias, precios y horarios cambian; verifica cerca de la fecha. Los links de fotos y videos abren búsquedas en Google/YouTube. Mapa base © OpenStreetMap · CARTO · Leaflet. Tu progreso se guarda solo en este navegador.</p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- DATA ---------- */
+  var route = [
+    {leg:1, name:"Miami, FL",               note:"Inicio y fin del loop",                     lat:25.7617, lng:-80.1918},
+    {leg:1, name:"Macon, GA",               note:"Soul music: Allman Brothers, Otis Redding", lat:32.8407, lng:-83.6324},
+    {leg:2, name:"Atlanta, GA",             note:"Base con tu amiga · el Hollywood del Sur",   lat:33.7557, lng:-84.3884},
+    {leg:3, name:"Great Smoky Mountains",   note:"El parque nacional más visitado de EE.UU.",  lat:35.6033, lng:-83.7752},
+    {leg:3, name:"Asheville, NC",           note:"Biltmore, cervecerías, Blue Ridge Parkway",  lat:35.5951, lng:-82.5515},
+    {leg:4, name:"Luray Caverns, VA",       note:"El órgano de estalactitas",                  lat:38.6642, lng:-78.4835},
+    {leg:5, name:"Washington, DC",          note:"Museos gratis · memoriales de noche",        lat:38.9072, lng:-77.0369},
+    {leg:6, name:"Filadelfia, PA",          note:"Rocky, cheesesteaks, Magic Gardens",         lat:39.9526, lng:-75.1652},
+    {leg:7, name:"Nueva York, NY",          note:"Deja el carro, usa el metro",                lat:40.7128, lng:-74.0060},
+    {leg:8, name:"New Hampshire",           note:"Casa con tu amiga · White Mountains",        lat:42.9956, lng:-71.4548},
+    {leg:8, name:"Portland, Maine",         note:"Meca del lobster roll",                      lat:43.6591, lng:-70.2568},
+    {leg:8, name:"Boston, MA",              note:"Freedom Trail · Good Will Hunting",          lat:42.3601, lng:-71.0589},
+    {leg:9, name:"Chincoteague, VA",        note:"Caballos salvajes en la playa",              lat:37.9339, lng:-75.3577},
+    {leg:9, name:"Outer Banks, NC",         note:"Dunas de Jockey's Ridge · faro de Hatteras", lat:35.9573, lng:-75.6240},
+    {leg:9, name:"South of the Border, SC", note:"El templo del kitsch en la I-95",            lat:34.4210, lng:-79.4230},
+    {leg:9, name:"Charleston, SC",          note:"Angel Oak · Rainbow Row",                    lat:32.7765, lng:-79.9311},
+    {leg:9, name:"Savannah, GA",            note:"Bonaventure · la banca de Forrest Gump",     lat:32.0809, lng:-81.0912},
+    {leg:9, name:"St. Augustine, FL",       note:"La ciudad más antigua de EE.UU.",            lat:29.8947, lng:-81.3145},
+    {leg:9, name:"Kennedy Space Center",    note:"Cohetes e historia de la Luna",              lat:28.5729, lng:-80.6490},
+    {leg:9, name:"Coral Castle, Homestead", note:"Un castillo de coral por un amor perdido",   lat:25.5003, lng:-80.4442},
+    {leg:1, name:"Miami, FL",               note:"De vuelta a casa",                           lat:25.7617, lng:-80.1918, endpoint:true}
+  ];
+  var film = [
+    {leg:2, name:"Senoia, GA",          movie:"The Walking Dead",      lat:33.3018, lng:-84.5527},
+    {leg:2, name:"Gwinnett Place Mall", movie:"Stranger Things",       lat:33.9601, lng:-84.1332},
+    {leg:3, name:"DuPont State Forest", movie:"Los Juegos del Hambre", lat:35.2016, lng:-82.6193},
+    {leg:3, name:"Lake Lure, NC",       movie:"Dirty Dancing",         lat:35.4340, lng:-82.2015},
+    {leg:6, name:"Rocky Steps",         movie:"Rocky · Filadelfia",    lat:39.9656, lng:-75.1810},
+    {leg:7, name:"Edificio de Friends", movie:"Friends · NYC",         lat:40.7323, lng:-74.0064},
+    {leg:8, name:"Salem, MA",           movie:"Hocus Pocus",           lat:42.5195, lng:-70.8967},
+    {leg:9, name:"Cypress Gardens, SC", movie:"The Notebook",          lat:33.0699, lng:-80.0812}
+  ];
+
+  var css = getComputedStyle(document.documentElement);
+  var AMBER = "#E4972B", ROSE = "#CE4E63", INK = "#231D15";
+
+  /* ---------- MAP ---------- */
+  try{
+  var map = L.map('map', {scrollWheelZoom:false, zoomControl:true}).setView([37.4,-78.5],5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    maxZoom:18, subdomains:'abcd',
+    attribution:'&copy; OpenStreetMap &copy; CARTO'
+  }).addTo(map);
+
+  var line = route.map(function(p){ return [p.lat,p.lng]; });
+  var poly = L.polyline(line, {color:AMBER, weight:3, opacity:.9, dashArray:'2,10', lineCap:'round'}).addTo(map);
+
+  function gm(name){ return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(name); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  var routeLayer = L.layerGroup().addTo(map);
+  var filmLayer  = L.layerGroup().addTo(map);
+  var legMarkers = {}; // leg -> array of latlng for fitBounds
+
+  function pushLeg(leg, latlng){ (legMarkers[leg] = legMarkers[leg]||[]).push(latlng); }
+
+  route.forEach(function(p){
+    if(p.endpoint) return;
+    var icon = L.divIcon({className:'', iconSize:[28,28], iconAnchor:[14,14], popupAnchor:[0,-14],
+      html:'<div style="background:'+AMBER+';color:'+INK+';border:2.5px solid '+INK+';border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-family:Archivo,sans-serif;font-weight:800;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.45)">'+p.leg+'</div>'});
+    var pop = '<div class="pop"><span class="pop-leg">Tramo '+('0'+p.leg).slice(-2)+'</span>'
+      +'<h4>'+esc(p.name)+'</h4><p>'+esc(p.note)+'</p>'
+      +'<span class="jump" data-jump="l'+p.leg+'">▸ Ver este tramo</span>'
+      +'<a href="'+gm(p.name)+'" target="_blank" rel="noopener">Google Maps →</a></div>';
+    L.marker([p.lat,p.lng],{icon:icon}).bindPopup(pop).addTo(routeLayer);
+    pushLeg(p.leg,[p.lat,p.lng]);
+  });
+
+  film.forEach(function(p){
+    var icon = L.divIcon({className:'', iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-12],
+      html:'<div style="background:'+ROSE+';color:#fff;border:2.5px solid #fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.45)">🎬</div>'});
+    var pop = '<div class="pop"><span class="pop-leg pop-film">🎬 '+esc(p.movie)+'</span>'
+      +'<h4>'+esc(p.name)+'</h4>'
+      +'<span class="jump" data-jump="l'+p.leg+'">▸ Ver este tramo</span>'
+      +'<a href="'+gm(p.name)+'" target="_blank" rel="noopener">Google Maps →</a></div>';
+    L.marker([p.lat,p.lng],{icon:icon}).bindPopup(pop).addTo(filmLayer);
+    pushLeg(p.leg,[p.lat,p.lng]);
+  });
+
+  var fullBounds = poly.getBounds().pad(0.08);
+  map.fitBounds(fullBounds);
+  map.on('click', function(){ if(!map.scrollWheelZoom.enabled()) map.scrollWheelZoom.enable(); });
+
+  // popup "ver tramo" links
+  map.on('popupopen', function(e){
+    var el = e.popup.getElement();
+    if(!el) return;
+    var j = el.querySelector('[data-jump]');
+    if(j) j.addEventListener('click', function(){
+      map.closePopup();
+      gotoLeg(this.getAttribute('data-jump'), true);
+    });
+  });
+
+  /* ---------- FOCUS A LEG ON MAP ---------- */
+  var currentFocus = 0;
+  function focusLeg(leg, animate){
+    var pts = legMarkers[leg];
+    if(!pts || !pts.length) return;
+    currentFocus = leg;
+    if(pts.length === 1){
+      map.setView(pts[0], 8, {animate:!!animate});
+    } else {
+      map.fitBounds(L.latLngBounds(pts).pad(0.35), {animate:!!animate, maxZoom:9});
+    }
+  }
+
+  /* ---------- SCROLL LINK ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.leg'));
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.navchip'));
+  var followEl = document.getElementById('tFollow');
+
+  function setActiveChip(id){
+    chips.forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-goto')===id); });
+    var ac = document.querySelector('.navchip.active');
+    if(ac && ac.scrollIntoView) ac.scrollIntoView({block:'nearest', inline:'center'});
+  }
+
+  function gotoLeg(id, force){
+    var sec = document.getElementById(id);
+    if(sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){ gotoLeg(this.getAttribute('data-goto')); });
+  });
+
+  // focus buttons
+  Array.prototype.slice.call(document.querySelectorAll('.locate')).forEach(function(b){
+    b.addEventListener('click', function(){
+      var leg = +this.getAttribute('data-focus');
+      focusLeg(leg, true);
+      document.getElementById('dash').scrollIntoView({behavior:'smooth', block:'start'});
+      var self=this; self.classList.add('on'); setTimeout(function(){ self.classList.remove('on'); }, 900);
+    });
+  });
+
+  // scroll-spy
+  var spy = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        var leg = +en.target.getAttribute('data-leg');
+        var id = en.target.id;
+        setActiveChip(id);
+        if(followEl.checked && leg!==currentFocus) focusLeg(leg, true);
+      }
+    });
+  }, {rootMargin:'-45% 0px -50% 0px', threshold:0});
+  sections.forEach(function(s){ spy.observe(s); });
+
+  /* ---------- LAYER TOGGLES ---------- */
+  document.getElementById('tRoute').addEventListener('change', function(){
+    if(this.checked) map.addLayer(routeLayer); else map.removeLayer(routeLayer);
+  });
+  document.getElementById('tFilm').addEventListener('change', function(){
+    if(this.checked) map.addLayer(filmLayer); else map.removeLayer(filmLayer);
+  });
+  } catch(mapErr){ if(window.console) console.warn('Mapa no disponible (sin conexión):', mapErr); }
+
+  /* ---------- CHECKLIST + PROGRESS ---------- */
+  var KEY = 'roadtrip-este-usa-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.chk'));
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e){ saved = {}; }
+
+  var pBar = document.getElementById('pBar'),
+      pDone = document.getElementById('pDone'),
+      pOf = document.getElementById('pOf'),
+      pPct = document.getElementById('pPct');
+
+  function persist(){
+    var obj = {};
+    boxes.forEach(function(b){ if(b.checked) obj[b.getAttribute('data-id')] = 1; });
+    try { localStorage.setItem(KEY, JSON.stringify(obj)); } catch(e){}
+  }
+  function refreshProgress(){
+    var done = boxes.filter(function(b){ return b.checked; }).length;
+    var total = boxes.length;
+    var pct = total ? Math.round(done/total*100) : 0;
+    pBar.style.width = pct + '%';
+    pDone.textContent = done;
+    pOf.textContent = ' / ' + total + ' paradas';
+    pPct.textContent = pct + '%';
+  }
+  boxes.forEach(function(b){
+    var id = b.getAttribute('data-id');
+    if(saved[id]) b.checked = true;
+    var card = b.closest('.card');
+    function sync(){ if(card) card.classList.toggle('done', b.checked); }
+    sync();
+    b.addEventListener('change', function(){ sync(); persist(); refreshProgress(); });
+  });
+  document.getElementById('statStops').innerHTML = boxes.length + ' <small>lugares</small>';
+  refreshProgress();
+
+  /* ---------- THEME TOGGLE ---------- */
+  var root = document.documentElement;
+  var tKey = 'roadtrip-theme';
+  var tBtn = document.getElementById('theme'),
+      tIcon = document.getElementById('themeIcon'),
+      tLabel = document.getElementById('themeLabel');
+  function applyTheme(mode){
+    root.setAttribute('data-theme', mode);
+    var dark = mode==='dark';
+    tIcon.textContent = dark ? '☀' : '☾';
+    tLabel.textContent = dark ? 'Modo día' : 'Modo noche';
+  }
+  var stored = null;
+  try { stored = localStorage.getItem(tKey); } catch(e){}
+  if(stored){ applyTheme(stored); }
+  else if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){ applyTheme('dark'); }
+  tBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem(tKey, next); } catch(e){}
+  });
+
+})();
+</script>
+</body>
+</html>
