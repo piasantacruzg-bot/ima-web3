@@ -2,6 +2,162 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   IMA WEB3 — Premium fintech design system
+   Semantic color tokens flip between light & dark themes.
+   ============================================================ */
+
+:root {
+  --canvas: 244 245 248; /* soft off-white */
+  --surface: 255 255 255;
+  --elevated: 255 255 255;
+  --line: 226 228 235;
+  --ink: 11 13 20;
+  --muted: 99 106 122;
+  --faint: 148 154 168;
+
+  --grad-a: #7c5cff;
+  --grad-b: #5b8def;
+  --grad-c: #4cc9f0;
+
+  --glass-bg: rgba(255, 255, 255, 0.68);
+  --glass-brd: rgba(20, 22, 34, 0.06);
+  --ring: rgba(124, 92, 255, 0.35);
+}
+
+.dark {
+  --canvas: 8 9 14; /* deep near-black */
+  --surface: 18 20 28;
+  --elevated: 24 27 37;
+  --line: 40 44 58;
+  --ink: 244 246 251;
+  --muted: 155 161 176;
+  --faint: 98 104 120;
+
+  --glass-bg: rgba(24, 27, 37, 0.6);
+  --glass-brd: rgba(255, 255, 255, 0.08);
+  --ring: rgba(139, 124, 255, 0.45);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-canvas text-ink antialiased;
+  font-feature-settings: "ss01", "cv11", "tnum";
+  background-image: radial-gradient(
+      1200px 600px at 100% -10%,
+      rgba(124, 92, 255, 0.1),
+      transparent 60%
+    ),
+    radial-gradient(
+      1000px 500px at -10% 10%,
+      rgba(76, 201, 240, 0.08),
+      transparent 55%
+    );
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+/* Tabular figures for money so digits never jitter while animating */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid var(--glass-brd);
+  }
+
+  .card {
+    @apply rounded-4xl border border-line bg-surface shadow-card;
+  }
+
+  .gradient-brand {
+    background-image: linear-gradient(
+      135deg,
+      var(--grad-a) 0%,
+      var(--grad-b) 55%,
+      var(--grad-c) 100%
+    );
+  }
+
+  .text-gradient {
+    background-image: linear-gradient(
+      120deg,
+      var(--grad-a),
+      var(--grad-b),
+      var(--grad-c)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .tap {
+    @apply transition-transform duration-200 ease-spring active:scale-[0.97];
+  }
+
+  .press {
+    @apply transition-all duration-200 ease-spring active:scale-95;
+  }
+
+  /* Premium loading skeleton */
+  .skeleton {
+    @apply relative overflow-hidden rounded-2xl bg-line/60;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.14),
+      transparent
+    );
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .safe-b {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+  .stagger > * {
+    animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0.04s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.09s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.14s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.19s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.24s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.29s; }
+  .stagger > *:nth-child(7) { animation-delay: 0.34s; }
+  .stagger > *:nth-child(8) { animation-delay: 0.39s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
