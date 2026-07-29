@@ -1,5 +1,5 @@
 // ============================================================
-// Domain model for the Aura premium finance experience.
+// Domain model for the My Money premium finance experience.
 // Everything here is client-side demo data — no backend needed.
 // ============================================================
 
@@ -44,6 +44,7 @@ export type CategoryKey =
   | "bills"
   | "entertainment"
   | "health"
+  | "other"
   | "transfer";
 
 export interface Category {

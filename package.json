@@ -1,8 +1,8 @@
 {
-  "name": "ima-web3-reportes",
+  "name": "my-money",
   "version": "0.1.0",
   "private": true,
-  "description": "Plataforma de IMA WEB3 para registrar links publicados por influencers y actualizar metricas automaticamente en una master sheet de Google Drive.",
+  "description": "My Money — a premium personal finance app: net worth, accounts, transfers, insights and monthly Excel exports.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

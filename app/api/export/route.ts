@@ -88,9 +88,9 @@ async function buildPdf(
   doc.rect(0, 0, 595, 90, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(22);
-  doc.text("Aura · Financial Report", 40, 45);
+  doc.text("Financial Report", 40, 45);
   doc.setFontSize(12);
-  doc.text(`${monthName} ${year} · IMA WEB3`, 40, 66);
+  doc.text(`${monthName} ${year}`, 40, 66);
 
   const monthly = transactions.filter((t) => {
     const d = new Date(t.dateISO);

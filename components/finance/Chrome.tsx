@@ -66,12 +66,7 @@ export function TopBar({ greeting }: { greeting: string }) {
     <header className="sticky top-0 z-30 flex items-center justify-between px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
       <div>
         <p className="text-xs font-medium text-muted">{greeting}</p>
-        <h1 className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
-          Aura
-          <span className="rounded-md bg-brand/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-brand-light">
-            IMA WEB3
-          </span>
-        </h1>
+        <h1 className="text-lg font-bold tracking-tight">My Money</h1>
       </div>
       <div className="flex items-center gap-2">
         <SyncBadge />

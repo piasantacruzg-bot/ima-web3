@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Aura · IMA WEB3",
-    short_name: "Aura",
+    name: "My Money",
+    short_name: "My Money",
     description:
       "A premium way to see all your money in one place — net worth, accounts, transfers and insights.",
     start_url: "/",

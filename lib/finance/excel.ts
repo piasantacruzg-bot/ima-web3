@@ -67,7 +67,7 @@ export async function buildMonthlyWorkbook(
   accounts: Account[]
 ): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Aura · IMA WEB3";
+  wb.creator = "My Money";
   wb.created = new Date(Date.UTC(year, monthIndex0, 1));
 
   const monthly = transactions.filter((t) => {
@@ -383,7 +383,7 @@ export async function buildYearlyWorkbook(
   accounts: Account[]
 ): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Aura · IMA WEB3";
+  wb.creator = "My Money";
 
   const ws = wb.addWorksheet(`${year} Summary`, { properties: { tabColor: { argb: "FF7C5CFF" } } });
   ws.columns = [{ width: 14 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }];

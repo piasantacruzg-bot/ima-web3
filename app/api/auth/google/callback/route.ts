@@ -33,7 +33,7 @@ export async function GET(req: Request) {
        <p>Add this to your environment as <code>GOOGLE_OAUTH_REFRESH_TOKEN</code> and redeploy:</p>
        <pre style="white-space:pre-wrap;word-break:break-all;background:#f3f3f6;padding:16px;border-radius:12px">${escape(refresh)}</pre>
        <p>Your monthly workbooks will then sync into the configured Drive folder automatically.</p>
-       <p><a href="/">← Back to Aura</a></p>`
+       <p><a href="/">← Back to the app</a></p>`
     );
   } catch (err) {
     return html(`<h1>Token exchange failed</h1><p>${escape((err as Error).message)}</p>`);
@@ -49,7 +49,7 @@ function escape(s: string): string {
 function html(body: string): Response {
   return new Response(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-     <title>Aura · Google Drive</title>
+     <title>My Money · Google Drive</title>
      <div style="max-width:640px;margin:48px auto;font-family:-apple-system,system-ui,sans-serif;padding:0 20px;line-height:1.5">${body}</div>`,
     { headers: { "content-type": "text/html; charset=utf-8" } }
   );

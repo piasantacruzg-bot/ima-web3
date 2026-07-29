@@ -23,6 +23,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
   bills: { key: "bills", label: "Bills & Utilities", emoji: "⚡", color: "#f472b6" },
   entertainment: { key: "entertainment", label: "Entertainment", emoji: "🎬", color: "#5b8def" },
   health: { key: "health", label: "Health", emoji: "💊", color: "#a78bfa" },
+  other: { key: "other", label: "Other", emoji: "🏷️", color: "#8b93a7" },
   transfer: { key: "transfer", label: "Transfers", emoji: "🔄", color: "#94a3b8" },
 };
 
@@ -147,7 +148,7 @@ export const TRANSACTIONS: Transaction[] = [
   tx("t2", "bcp", "Metro Supermercado", "groceries", -184.3, "2026-07-29T10:40:00", 14320.8, { location: "Miraflores" }),
   tx("t3", "io", "Uber", "transport", -14.8, "2026-07-29T11:05:00", -1840.3, { location: "Lima" }),
   // Yesterday
-  tx("t4", "boa", "Payroll · IMA WEB3", "income", 3200.0, "2026-07-28T09:00:00", 8426.5, { note: "Bi-weekly salary", recurring: true }),
+  tx("t4", "boa", "Payroll", "income", 3200.0, "2026-07-28T09:00:00", 8426.5, { note: "Bi-weekly salary", recurring: true }),
   tx("t5", "io", "Amazon", "shopping", -212.4, "2026-07-28T14:22:00", -1825.5, { note: "Standing desk riser" }),
   tx("t6", "kast", "Rappi", "restaurants", -28.9, "2026-07-28T20:10:00", 3266.5, { location: "Lima" }),
   tx("t7", "bcp", "Netflix", "subscriptions", -44.9, "2026-07-28T00:00:00", 14505.1, { recurring: true }),

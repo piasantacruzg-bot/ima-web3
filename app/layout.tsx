@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Aura · by IMA WEB3",
+  title: "My Money",
   description:
     "A premium way to see all your money in one place. Net worth, accounts, transfers and insights — beautifully.",
-  applicationName: "Aura",
+  applicationName: "My Money",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Aura",
+    title: "My Money",
     statusBarStyle: "black-translucent",
   },
 };

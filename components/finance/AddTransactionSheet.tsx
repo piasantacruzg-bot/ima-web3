@@ -11,7 +11,7 @@ type Kind = "expense" | "income";
 
 const EXPENSE_CATS: CategoryKey[] = [
   "restaurants", "groceries", "shopping", "transport",
-  "subscriptions", "bills", "entertainment", "health",
+  "subscriptions", "bills", "entertainment", "health", "other",
 ];
 const INCOME_CATS: CategoryKey[] = ["income"];
 
