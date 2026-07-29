@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   description:
     "A premium way to see all your money in one place. Net worth, accounts, transfers and insights — beautifully.",
   applicationName: "Aura",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Aura",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
