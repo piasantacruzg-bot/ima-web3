@@ -21,42 +21,34 @@ import {
 } from "./compute";
 
 // ============================================================
-// Client store + sync engine.
+// Client store.
 // - Transactions live in React state and localStorage (offline-first).
-// - Every mutation is queued and flushed to /api/sync (Google Drive).
-// - Sync status surfaces as 🟢 synced / 🟡 pending / 🔴 error.
+// - Nothing is pushed to Google Drive automatically. The user exports
+//   (download or save-to-Drive) on demand — e.g. at the end of the month.
 // ============================================================
 
-export type SyncStatus = "synced" | "pending" | "error" | "offline";
-
-type Mutation =
-  | { op: "create"; tx: Transaction }
-  | { op: "update"; tx: Transaction }
-  | { op: "delete"; id: string };
-
-interface Persisted {
-  userTx: Transaction[];
-  queue: Mutation[];
-}
+export type SaveStatus = "saved" | "saving";
 
 const LS_KEY = "aura-finance-v1";
 
-function loadPersisted(): Persisted {
-  if (typeof window === "undefined") return { userTx: [], queue: [] };
+function loadUserTx(): Transaction[] {
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return { userTx: [], queue: [] };
-    const parsed = JSON.parse(raw) as Persisted;
-    return { userTx: parsed.userTx ?? [], queue: parsed.queue ?? [] };
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // Back-compat with the earlier { userTx, queue } shape.
+    if (Array.isArray(parsed)) return parsed;
+    return Array.isArray(parsed.userTx) ? parsed.userTx : [];
   } catch {
-    return { userTx: [], queue: [] };
+    return [];
   }
 }
 
-function savePersisted(p: Persisted) {
+function saveUserTx(userTx: Transaction[]) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(p));
+    localStorage.setItem(LS_KEY, JSON.stringify({ userTx }));
   } catch {
     /* storage full / unavailable */
   }
@@ -71,39 +63,22 @@ function uid(): string {
 
 // --- Reducer ------------------------------------------------------
 
-interface State {
-  userTx: Transaction[];
-  queue: Mutation[];
-}
-
 type Action =
-  | { type: "hydrate"; payload: Persisted }
+  | { type: "hydrate"; payload: Transaction[] }
   | { type: "create"; tx: Transaction }
   | { type: "update"; tx: Transaction }
-  | { type: "delete"; id: string }
-  | { type: "flushed" };
+  | { type: "delete"; id: string };
 
-function reducer(state: State, action: Action): State {
+function reducer(state: Transaction[], action: Action): Transaction[] {
   switch (action.type) {
     case "hydrate":
-      return { userTx: action.payload.userTx, queue: action.payload.queue };
+      return action.payload;
     case "create":
-      return {
-        userTx: [action.tx, ...state.userTx],
-        queue: [...state.queue, { op: "create", tx: action.tx }],
-      };
+      return [action.tx, ...state];
     case "update":
-      return {
-        userTx: state.userTx.map((t) => (t.id === action.tx.id ? action.tx : t)),
-        queue: [...state.queue, { op: "update", tx: action.tx }],
-      };
+      return state.map((t) => (t.id === action.tx.id ? action.tx : t));
     case "delete":
-      return {
-        userTx: state.userTx.filter((t) => t.id !== action.id),
-        queue: [...state.queue, { op: "delete", id: action.id }],
-      };
-    case "flushed":
-      return { ...state, queue: [] };
+      return state.filter((t) => t.id !== action.id);
     default:
       return state;
   }
@@ -114,18 +89,18 @@ function reducer(state: State, action: Action): State {
 interface StoreValue {
   accounts: Account[];
   transactions: Transaction[]; // seed + user, newest first
-  userTransactions: Transaction[]; // user-added only (the sync snapshot)
+  userTransactions: Transaction[]; // user-added only (the export snapshot)
   metrics: ReturnType<typeof computeMetrics>;
   spendByCategory: ReturnType<typeof computeSpendByCategory>;
   feeRules: typeof FEE_RULES;
-  syncStatus: SyncStatus;
-  pendingCount: number;
-  lastSyncedAt: string | null;
+  saveStatus: SaveStatus;
   driveConnected: boolean;
+  lastExportedAt: string | null;
   addTransaction: (input: NewTransaction) => void;
   updateTransaction: (tx: Transaction) => void;
   deleteTransaction: (id: string) => void;
-  retrySync: () => void;
+  /** Manually build & upload the current month's workbook to Drive. */
+  exportMonthToDrive: () => Promise<{ ok: boolean; connected: boolean }>;
 }
 
 export interface NewTransaction {
@@ -142,98 +117,33 @@ export interface NewTransaction {
 const StoreCtx = createContext<StoreValue | null>(null);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, { userTx: [], queue: [] });
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>("synced");
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [userTx, dispatch] = useReducer(reducer, []);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [driveConnected, setDriveConnected] = useState(false);
-  const flushing = useRef(false);
-  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const attempt = useRef(0);
+  const [lastExportedAt, setLastExportedAt] = useState<string | null>(null);
+  const firstRender = useRef(true);
 
   // Hydrate from localStorage once on mount.
   useEffect(() => {
-    dispatch({ type: "hydrate", payload: loadPersisted() });
-    // Probe whether Drive is configured (does not require the user to be online).
+    dispatch({ type: "hydrate", payload: loadUserTx() });
+    // Probe whether Drive is configured (for the manual export option).
     fetch("/api/sync", { method: "GET" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d) {
-          setDriveConnected(Boolean(d.connected));
-          if (d.lastSyncedAt) setLastSyncedAt(d.lastSyncedAt);
-        }
-      })
+      .then((d) => d && setDriveConnected(Boolean(d.connected)))
       .catch(() => setDriveConnected(false));
   }, []);
 
-  // Persist on every change.
+  // Persist locally on every change (this is the only automatic write).
   useEffect(() => {
-    savePersisted({ userTx: state.userTx, queue: state.queue });
-  }, [state.userTx, state.queue]);
-
-  // Flush queue to the server (Drive). Retries with backoff on failure.
-  const flush = useCallback(async () => {
-    if (flushing.current) return;
-    if (state.queue.length === 0) {
-      setSyncStatus("synced");
+    if (firstRender.current) {
+      firstRender.current = false;
       return;
     }
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      setSyncStatus("offline");
-      return;
-    }
-    flushing.current = true;
-    setSyncStatus("pending");
-    try {
-      const res = await fetch("/api/sync", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mutations: state.queue, snapshot: state.userTx }),
-      });
-      if (!res.ok) throw new Error(`sync ${res.status}`);
-      const data = await res.json().catch(() => ({}));
-      dispatch({ type: "flushed" });
-      attempt.current = 0;
-      setSyncStatus("synced");
-      setDriveConnected(Boolean(data.connected));
-      const ts = data.syncedAt ?? new Date().toISOString();
-      setLastSyncedAt(ts);
-    } catch {
-      // Keep the queue; surface error and schedule a retry with backoff.
-      attempt.current += 1;
-      setSyncStatus(navigator.onLine ? "error" : "offline");
-      const delay = Math.min(2000 * 2 ** (attempt.current - 1), 30_000);
-      if (retryTimer.current) clearTimeout(retryTimer.current);
-      retryTimer.current = setTimeout(() => {
-        flushing.current = false;
-        flush();
-      }, delay);
-      return;
-    } finally {
-      flushing.current = false;
-    }
-  }, [state.queue, state.userTx]);
-
-  // Auto-flush whenever the queue grows.
-  useEffect(() => {
-    if (state.queue.length > 0) flush();
-    else setSyncStatus((s) => (s === "offline" ? s : "synced"));
-  }, [state.queue, flush]);
-
-  // React to connectivity changes: sync as soon as we're back online.
-  useEffect(() => {
-    const onOnline = () => {
-      attempt.current = 0;
-      flush();
-    };
-    const onOffline = () => setSyncStatus("offline");
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    if (typeof navigator !== "undefined" && !navigator.onLine) setSyncStatus("offline");
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-    };
-  }, [flush]);
+    setSaveStatus("saving");
+    saveUserTx(userTx);
+    const t = setTimeout(() => setSaveStatus("saved"), 350);
+    return () => clearTimeout(t);
+  }, [userTx]);
 
   // --- Mutations --------------------------------------------------
 
@@ -251,23 +161,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       balanceAfter: account.balance + input.amount,
     };
     dispatch({ type: "create", tx });
-    // If this is a transfer, mirror the credit into the destination account
-    // (converting across currencies at the reference rate).
+    // Mirror a transfer's credit into the destination account.
     if (input.destinationAccountId) {
       const dest = ACCOUNTS.find((a) => a.id === input.destinationAccountId);
       if (dest) {
         const received = convert(Math.abs(input.amount), account.currency, dest.currency);
-        const credit: Transaction = {
-          id: uid(),
-          accountId: dest.id,
-          merchant: `Transfer from ${account.name}`,
-          category: "transfer",
-          amount: received,
-          currency: dest.currency,
-          dateISO: tx.dateISO,
-          balanceAfter: dest.balance + received,
-        };
-        dispatch({ type: "create", tx: credit });
+        dispatch({
+          type: "create",
+          tx: {
+            id: uid(),
+            accountId: dest.id,
+            merchant: `Transfer from ${account.name}`,
+            category: "transfer",
+            amount: received,
+            currency: dest.currency,
+            dateISO: tx.dateISO,
+            balanceAfter: dest.balance + received,
+          },
+        });
       }
     }
   }, []);
@@ -280,39 +191,50 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "delete", id });
   }, []);
 
-  const retrySync = useCallback(() => {
-    attempt.current = 0;
-    flush();
-  }, [flush]);
+  const exportMonthToDrive = useCallback(async () => {
+    try {
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ snapshot: userTx }),
+      });
+      if (!res.ok) return { ok: false, connected: driveConnected };
+      const data = await res.json().catch(() => ({}));
+      setDriveConnected(Boolean(data.connected));
+      if (data.connected) setLastExportedAt(data.syncedAt ?? new Date().toISOString());
+      return { ok: true, connected: Boolean(data.connected) };
+    } catch {
+      return { ok: false, connected: driveConnected };
+    }
+  }, [userTx, driveConnected]);
 
   // --- Derived ----------------------------------------------------
 
   const transactions = useMemo(
     () =>
-      [...state.userTx, ...TRANSACTIONS].sort(
+      [...userTx, ...TRANSACTIONS].sort(
         (a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime()
       ),
-    [state.userTx]
+    [userTx]
   );
-  const accounts = useMemo(() => liveAccounts(ACCOUNTS, state.userTx), [state.userTx]);
+  const accounts = useMemo(() => liveAccounts(ACCOUNTS, userTx), [userTx]);
   const metrics = useMemo(() => computeMetrics(accounts, transactions), [accounts, transactions]);
   const spendByCategory = useMemo(() => computeSpendByCategory(transactions), [transactions]);
 
   const value: StoreValue = {
     accounts,
     transactions,
-    userTransactions: state.userTx,
+    userTransactions: userTx,
     metrics,
     spendByCategory,
     feeRules: FEE_RULES,
-    syncStatus,
-    pendingCount: state.queue.length,
-    lastSyncedAt,
+    saveStatus,
     driveConnected,
+    lastExportedAt,
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    retrySync,
+    exportMonthToDrive,
   };
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;

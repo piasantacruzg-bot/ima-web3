@@ -52,8 +52,11 @@ Finance Tracker/
   Backups/               # weekly, timestamped
 ```
 
-- A **new workbook is created automatically each month**; previous months are
-  never overwritten.
+- Data is **not uploaded automatically**. It stays on your device until you
+  choose to export — a download, or a one-tap "Save month to Drive". The Home
+  screen shows an **end-of-month export prompt** so you can close out each month.
+- When you do save to Drive, a workbook is created per month (previous months
+  are never overwritten).
 - Each monthly workbook has these sheets: **Dashboard, Transactions, Income,
   Expenses, Transfers, Accounts, Budgets, Goals, Monthly Summary, Charts**.
 - The **Transactions** sheet columns: Date, Time, Description,
@@ -64,16 +67,16 @@ Finance Tracker/
   category, transfers, credit-card payments, largest expense/income, account
   balances and debt remaining.
 - **Yearly** `2026 Summary.xlsx` combines every month into annual reports.
-- **Weekly backups** run every Sunday via a cron (`/api/backup`, see
-  `vercel.json`) with timestamped copies.
+- An optional `/api/backup` route can create timestamped backup copies + refresh
+  the annual summary (manual/opt-in; not scheduled automatically).
 
-### Sync engine & data integrity
+### Storage & data integrity
 
 - Every transaction gets a **unique ID** — no duplicates.
-- Changes save locally first (offline-first) and **auto-sync** to Drive.
-- Offline changes are **queued** and flushed when connectivity returns, with
-  **automatic retry + exponential backoff**.
-- A live sync badge shows 🟢 Synced / 🟡 Pending / 🔴 Error / ⚪ Offline.
+- Changes save to the device immediately (offline-first, localStorage). A small
+  badge shows 🟢 Saved / 🟡 Saving.
+- **Nothing is pushed to Drive automatically** — you export on demand
+  (download or save-to-Drive), e.g. at the end of the month.
 
 ### Import / export
 
@@ -104,8 +107,9 @@ workbook sync.
    access, and paste the returned refresh token into
    `GOOGLE_OAUTH_REFRESH_TOKEN`. Redeploy.
 
-Once connected, creating/editing/deleting a transaction rebuilds and uploads the
-relevant monthly workbook automatically.
+Once connected, use **Cards → Save month** (or the end-of-month prompt on Home)
+to build and upload the current month's workbook. Transactions are never
+uploaded automatically.
 
 ## Architecture
 
@@ -114,9 +118,9 @@ app/
   page.tsx                      → renders the Aura app
   layout.tsx                    → theme bootstrap, viewport, metadata
   globals.css                   → design-system tokens (light/dark), animations
-  api/sync/route.ts             → receive mutations, write monthly workbook to Drive
+  api/sync/route.ts             → on-demand: write current month's workbook to Drive
   api/export/route.ts           → month / year xlsx + PDF downloads
-  api/backup/route.ts           → weekly backup + annual summary (cron)
+  api/backup/route.ts           → optional backup + annual summary (manual)
   api/auth/google/…             → OAuth connect + callback
 lib/finance/
   types.ts, data.ts             → domain model + demo data (accounts, tx, bills…)

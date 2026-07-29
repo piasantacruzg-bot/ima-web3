@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFinance, type SyncStatus } from "@/lib/finance/store";
+import { useFinance } from "@/lib/finance/store";
 import { haptic } from "./ui";
 
 // --- Theme toggle -------------------------------------------------
@@ -35,40 +35,27 @@ export function ThemeToggle() {
   );
 }
 
-// --- Sync status badge --------------------------------------------
-
-const SYNC_META: Record<SyncStatus, { dot: string; label: string; ring: string }> = {
-  synced: { dot: "bg-positive", label: "Synced", ring: "" },
-  pending: { dot: "bg-warning", label: "Syncing", ring: "animate-pulse-ring bg-warning" },
-  error: { dot: "bg-negative", label: "Retry", ring: "" },
-  offline: { dot: "bg-faint", label: "Offline", ring: "" },
-};
+// --- Local save badge ---------------------------------------------
+// Nothing auto-syncs to Drive; this reflects the local save state only.
 
 export function SyncBadge() {
-  const { syncStatus, pendingCount, retrySync, driveConnected, lastSyncedAt } = useFinance();
-  const meta = SYNC_META[syncStatus];
+  const { saveStatus, lastExportedAt } = useFinance();
+  const saving = saveStatus === "saving";
   return (
-    <button
-      onClick={() => {
-        haptic();
-        if (syncStatus === "error" || syncStatus === "pending") retrySync();
-      }}
-      className="press glass flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium"
+    <div
+      className="glass flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium"
       title={
-        driveConnected
-          ? `Google Drive · ${lastSyncedAt ? "last synced " + new Date(lastSyncedAt).toLocaleTimeString() : "connected"}`
-          : "Drive not connected — data saved locally"
+        lastExportedAt
+          ? `Saved on this device · last exported ${new Date(lastExportedAt).toLocaleTimeString()}`
+          : "Saved on this device — export whenever you like"
       }
     >
       <span className="relative grid place-items-center">
-        {meta.ring && <span className={`absolute h-2.5 w-2.5 rounded-full ${meta.ring}`} />}
-        <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
+        {saving && <span className="absolute h-2.5 w-2.5 animate-pulse-ring rounded-full bg-warning" />}
+        <span className={`h-2.5 w-2.5 rounded-full ${saving ? "bg-warning" : "bg-positive"}`} />
       </span>
-      <span className="text-muted">
-        {meta.label}
-        {syncStatus === "pending" && pendingCount > 0 ? ` ${pendingCount}` : ""}
-      </span>
-    </button>
+      <span className="text-muted">{saving ? "Saving" : "Saved"}</span>
+    </div>
   );
 }
 

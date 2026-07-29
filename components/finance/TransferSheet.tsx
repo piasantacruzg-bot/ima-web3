@@ -338,7 +338,7 @@ function TransferSuccess({
         {to.name} received {money(quote.received, to.currency)}
       </p>
       <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1.5 text-xs text-muted">
-        <span className="h-2 w-2 rounded-full bg-warning" /> Syncing to Google Drive…
+        <span className="h-2 w-2 rounded-full bg-positive" /> Saved on your device
       </div>
     </div>
   );

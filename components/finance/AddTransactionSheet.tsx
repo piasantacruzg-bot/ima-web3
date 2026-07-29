@@ -163,7 +163,7 @@ export function AddTransactionSheet({
         Save {kind === "income" ? "income" : "expense"}
       </button>
       <p className="mt-3 text-center text-[11px] text-faint">
-        Saved locally & synced to your Google Drive workbook.
+        Saved on your device. Export to Excel or Drive whenever you like.
       </p>
     </Sheet>
   );

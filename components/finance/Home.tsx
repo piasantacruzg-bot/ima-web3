@@ -6,6 +6,7 @@ import { money, moneyCompact, pct, relativeDue, shortDate } from "@/lib/finance/
 import { AccountCard } from "./AccountCard";
 import { AreaChart } from "./charts";
 import { InsightsCarousel } from "./InsightsFeed";
+import { MonthlyExportCard } from "./MonthlyExport";
 import { CountUp, SectionHeader } from "./ui";
 
 export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) {
@@ -69,6 +70,11 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
             sub={metrics.cashFlow >= 0 ? "You're net positive" : "Spending exceeds income"}
           />
         </div>
+      </section>
+
+      {/* End-of-month export prompt */}
+      <section className="px-5">
+        <MonthlyExportCard />
       </section>
 
       {/* Insights */}
