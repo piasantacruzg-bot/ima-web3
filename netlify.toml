@@ -1,0 +1,12 @@
+# Netlify deploy config for the Aura (Next.js 14) app.
+# The official Next.js plugin handles SSR, API routes and next/og images.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
