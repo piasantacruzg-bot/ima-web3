@@ -54,7 +54,17 @@ export function Activity() {
       </div>
 
       {groups.length === 0 && (
-        <div className="card p-10 text-center text-sm text-muted">No transactions match.</div>
+        <div className="card p-10 text-center">
+          <div className="text-3xl">🧾</div>
+          <p className="mt-2 text-sm font-medium">
+            {transactions.length === 0 ? "No transactions yet" : "No transactions match"}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {transactions.length === 0
+              ? "Tap ＋ to add your first income or expense."
+              : "Try a different search or filter."}
+          </p>
+        </div>
       )}
 
       <div className="space-y-6">

@@ -17,8 +17,12 @@ import { convert } from "./format";
 import {
   computeMetrics,
   computeSpendByCategory,
+  computeNetWorthSeries,
+  computeCashflowSeries,
+  generateInsights,
   liveAccounts,
 } from "./compute";
+import type { Insight } from "./types";
 
 // ============================================================
 // Client store.
@@ -92,6 +96,9 @@ interface StoreValue {
   userTransactions: Transaction[]; // user-added only (the export snapshot)
   metrics: ReturnType<typeof computeMetrics>;
   spendByCategory: ReturnType<typeof computeSpendByCategory>;
+  netWorthSeries: ReturnType<typeof computeNetWorthSeries>;
+  cashflowSeries: ReturnType<typeof computeCashflowSeries>;
+  insights: Insight[];
   feeRules: typeof FEE_RULES;
   saveStatus: SaveStatus;
   driveConnected: boolean;
@@ -220,6 +227,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const accounts = useMemo(() => liveAccounts(ACCOUNTS, userTx), [userTx]);
   const metrics = useMemo(() => computeMetrics(accounts, transactions), [accounts, transactions]);
   const spendByCategory = useMemo(() => computeSpendByCategory(transactions), [transactions]);
+  const netWorthSeries = useMemo(
+    () => computeNetWorthSeries(accounts, transactions),
+    [accounts, transactions]
+  );
+  const cashflowSeries = useMemo(() => computeCashflowSeries(transactions), [transactions]);
+  const insights = useMemo(
+    () => generateInsights(accounts, transactions, metrics),
+    [accounts, transactions, metrics]
+  );
 
   const value: StoreValue = {
     accounts,
@@ -227,6 +243,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     userTransactions: userTx,
     metrics,
     spendByCategory,
+    netWorthSeries,
+    cashflowSeries,
+    insights,
     feeRules: FEE_RULES,
     saveStatus,
     driveConnected,

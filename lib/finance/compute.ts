@@ -1,6 +1,8 @@
-import type { Account, CategoryKey, Transaction } from "./types";
-import { convert } from "./format";
+import type { Account, CategoryKey, Insight, Transaction } from "./types";
+import { convert, money } from "./format";
 import { CATEGORIES, NOW } from "./data";
+
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const toUSD = (amount: number, currency: "USD" | "PEN") =>
   convert(amount, currency, "USD");
@@ -132,6 +134,126 @@ const BUCKET_ORDER: TimeBucket[] = [
   "This Month",
   "Earlier",
 ];
+
+// Net-worth trajectory over the last N months (USD), reconstructed from
+// the actual transaction history so it grows as you add data.
+export function computeNetWorthSeries(
+  accounts: Account[],
+  transactions: Transaction[],
+  months = 12,
+  now = NOW
+): { values: number[]; labels: string[] } {
+  const current = accounts.reduce((s, a) => s + toUSD(a.balance, a.currency), 0);
+  const totalTx = transactions.reduce((s, t) => s + toUSD(t.amount, t.currency), 0);
+  const base = current - totalTx; // opening net worth before any transactions
+  const values: number[] = [];
+  const labels: string[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 0, 23, 59, 59));
+    const cum = transactions
+      .filter((t) => new Date(t.dateISO).getTime() <= monthEnd.getTime())
+      .reduce((s, t) => s + toUSD(t.amount, t.currency), 0);
+    values.push(base + cum);
+    labels.push(MONTH_SHORT[monthEnd.getUTCMonth()]);
+  }
+  return { values, labels };
+}
+
+// Income vs. expense for the last N months (USD).
+export function computeCashflowSeries(
+  transactions: Transaction[],
+  months = 6,
+  now = NOW
+): { month: string; income: number; expense: number }[] {
+  const out: { month: string; income: number; expense: number }[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth() - i;
+    const inMonth = (t: Transaction) => {
+      const d = new Date(t.dateISO);
+      return d.getUTCFullYear() * 12 + d.getUTCMonth() === y * 12 + m;
+    };
+    const income = transactions
+      .filter((t) => t.amount > 0 && t.category !== "transfer" && inMonth(t))
+      .reduce((s, t) => s + toUSD(t.amount, t.currency), 0);
+    const expense = transactions
+      .filter((t) => t.amount < 0 && t.category !== "transfer" && inMonth(t))
+      .reduce((s, t) => s + toUSD(Math.abs(t.amount), t.currency), 0);
+    out.push({ month: MONTH_SHORT[((m % 12) + 12) % 12], income, expense });
+  }
+  return out;
+}
+
+// Real, data-driven insights. Empty until there's something to say.
+export function generateInsights(
+  accounts: Account[],
+  transactions: Transaction[],
+  metrics: DashboardMetrics
+): Insight[] {
+  const out: Insight[] = [];
+  if (transactions.length === 0) return out;
+
+  const byCat = computeSpendByCategory(transactions);
+  if (byCat.length > 0) {
+    const top = byCat[0];
+    out.push({
+      id: "in-top",
+      tone: "neutral",
+      emoji: top.emoji,
+      title: `Most spent on ${top.label}`,
+      detail: `${money(top.value, "USD")} on ${top.label} so far this month.`,
+    });
+  }
+
+  if (metrics.incomeMonth > 0 || metrics.spentMonth > 0) {
+    if (metrics.savedMonth >= 0) {
+      out.push({
+        id: "in-save",
+        tone: "positive",
+        emoji: "📈",
+        title: "Saving this month",
+        detail: `You've kept ${money(metrics.savedMonth, "USD")} of your income this month.`,
+      });
+    } else {
+      out.push({
+        id: "in-over",
+        tone: "warning",
+        emoji: "⚠️",
+        title: "Spending over income",
+        detail: `You're ${money(Math.abs(metrics.savedMonth), "USD")} over your income this month.`,
+      });
+    }
+  }
+
+  for (const a of accounts) {
+    if (a.type === "credit" && a.balance < 0 && a.creditLimit) {
+      const util = Math.abs(a.balance) / a.creditLimit;
+      if (util > 0.3) {
+        out.push({
+          id: `in-util-${a.id}`,
+          tone: "warning",
+          emoji: "💳",
+          title: `${a.name} at ${(util * 100).toFixed(0)}%`,
+          detail: `Utilization is above 30%. Paying it down helps your score.`,
+        });
+      }
+    }
+  }
+
+  const expenses = transactions.filter((t) => t.amount < 0 && t.category !== "transfer" && isThisMonth(t.dateISO));
+  if (expenses.length > 0) {
+    const largest = expenses.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))[0];
+    out.push({
+      id: "in-largest",
+      tone: "neutral",
+      emoji: "🧾",
+      title: "Largest expense",
+      detail: `${largest.merchant} — ${money(Math.abs(largest.amount), largest.currency)}.`,
+    });
+  }
+
+  return out.slice(0, 5);
+}
 
 export function groupTimeline(transactions: Transaction[]) {
   const sorted = [...transactions].sort(

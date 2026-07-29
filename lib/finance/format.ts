@@ -136,7 +136,7 @@ function estimateArrival(from: Account, to: Account): string {
 
 // --- Date helpers -------------------------------------------------
 
-export function daysUntil(iso: string, now = new Date("2026-07-29T12:00:00")): number {
+export function daysUntil(iso: string, now = new Date()): number {
   const d = new Date(iso);
   const ms = d.getTime() - now.getTime();
   return Math.ceil(ms / 86_400_000);

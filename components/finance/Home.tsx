@@ -1,7 +1,7 @@
 "use client";
 
 import { useFinance } from "@/lib/finance/store";
-import { BILLS, SUBSCRIPTIONS, ACCOUNTS, NET_WORTH_SERIES } from "@/lib/finance/data";
+import { BILLS, SUBSCRIPTIONS } from "@/lib/finance/data";
 import { money, moneyCompact, pct, relativeDue, shortDate } from "@/lib/finance/format";
 import { AccountCard } from "./AccountCard";
 import { AreaChart } from "./charts";
@@ -10,7 +10,13 @@ import { MonthlyExportCard } from "./MonthlyExport";
 import { CountUp, SectionHeader } from "./ui";
 
 export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) {
-  const { accounts, transactions, metrics } = useFinance();
+  const { accounts, transactions, metrics, netWorthSeries, insights } = useFinance();
+  const nw = netWorthSeries.values;
+  const prevNw = nw[nw.length - 2] ?? 0;
+  const lastNw = nw[nw.length - 1] ?? 0;
+  const momChange = prevNw !== 0 ? (lastNw - prevNw) / Math.abs(prevNw) : 0;
+  const showMom = prevNw !== 0 && Math.abs(lastNw - prevNw) > 0.5;
+  const creditAccounts = accounts.filter((a) => a.type === "credit");
 
   return (
     <div className="space-y-7 pb-32">
@@ -21,9 +27,11 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
           <div className="relative">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-white/80">Total Net Worth</span>
-              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold">
-                ▲ {pct(0.031, { sign: false })} this month
-              </span>
+              {showMom && (
+                <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold">
+                  {momChange >= 0 ? "▲" : "▼"} {pct(momChange, { sign: false })} this month
+                </span>
+              )}
             </div>
             <CountUp
               value={metrics.netWorth}
@@ -33,11 +41,11 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
             />
             <div className="mt-3 -mx-2">
               <AreaChart
-                values={[...NET_WORTH_SERIES.slice(0, -1), metrics.netWorth]}
+                values={nw}
                 color="#ffffff"
                 height={90}
                 format={(n) => money(n, "USD", { decimals: 0 })}
-                labels={["Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul"]}
+                labels={netWorthSeries.labels}
               />
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -80,7 +88,7 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
       {/* Insights */}
       <section>
         <SectionHeader title="Smart insights" />
-        <InsightsCarousel />
+        <InsightsCarousel items={insights} />
       </section>
 
       {/* Accounts */}
@@ -104,6 +112,11 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
       <section className="px-5">
         <SectionHeader title="Upcoming bills" />
         <div className="card divide-y divide-line">
+          {BILLS.length === 0 && (
+            <div className="p-6 text-center text-sm text-muted">
+              No upcoming bills yet. 🎉
+            </div>
+          )}
           {BILLS.map((b) => {
             const days = relativeDue(b.dueDateISO);
             const soon = days.includes("today") || days.includes("tomorrow");
@@ -131,37 +144,50 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
       <section className="px-5">
         <SectionHeader title="Cards & subscriptions" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {ACCOUNTS.filter((a) => a.type === "credit").map((a) => (
-            <div key={a.id} className="card overflow-hidden p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">💳 {a.name}</span>
-                <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">
-                  {a.dueDateISO ? relativeDue(a.dueDateISO) : ""}
-                </span>
+          {creditAccounts.map((a) => {
+            const owed = Math.max(-a.balance, 0);
+            return (
+              <div key={a.id} className="card overflow-hidden p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">💳 {a.name}</span>
+                  {owed > 0 && a.dueDateISO && (
+                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">
+                      {relativeDue(a.dueDateISO)}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 text-2xl font-bold tnum">{money(owed, a.currency)}</div>
+                <div className="text-[11px] text-faint">
+                  {owed > 0 ? "Current balance owed" : "No balance owed 🎉"}
+                </div>
               </div>
-              <div className="mt-2 text-2xl font-bold tnum">{money(a.statementBalance ?? 0, a.currency)}</div>
-              <div className="text-[11px] text-faint">Statement balance due {a.dueDateISO ? shortDate(a.dueDateISO) : ""}</div>
-            </div>
-          ))}
+            );
+          })}
           <div className="card p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold">🔁 Subscriptions</span>
               <span className="text-[11px] text-faint">{SUBSCRIPTIONS.length} active</span>
             </div>
-            <div className="mt-3 flex -space-x-1.5">
-              {SUBSCRIPTIONS.map((s) => (
-                <span
-                  key={s.id}
-                  title={s.name}
-                  className="grid h-8 w-8 place-items-center rounded-xl border border-surface bg-canvas text-base"
-                >
-                  {s.emoji}
-                </span>
-              ))}
-            </div>
-            <div className="mt-3 text-[11px] text-muted">
-              Next: <span className="font-medium text-ink">{SUBSCRIPTIONS[1].name}</span> {money(SUBSCRIPTIONS[1].amount, SUBSCRIPTIONS[1].currency)} · {relativeDue(SUBSCRIPTIONS[1].nextChargeISO)}
-            </div>
+            {SUBSCRIPTIONS.length === 0 ? (
+              <p className="mt-3 text-[11px] text-muted">No subscriptions tracked yet.</p>
+            ) : (
+              <>
+                <div className="mt-3 flex -space-x-1.5">
+                  {SUBSCRIPTIONS.map((s) => (
+                    <span
+                      key={s.id}
+                      title={s.name}
+                      className="grid h-8 w-8 place-items-center rounded-xl border border-surface bg-canvas text-base"
+                    >
+                      {s.emoji}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-3 text-[11px] text-muted">
+                  Next: <span className="font-medium text-ink">{SUBSCRIPTIONS[0].name}</span> {money(SUBSCRIPTIONS[0].amount, SUBSCRIPTIONS[0].currency)} · {relativeDue(SUBSCRIPTIONS[0].nextChargeISO)}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>

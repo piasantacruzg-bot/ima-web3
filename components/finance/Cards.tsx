@@ -62,6 +62,11 @@ export function Cards({ onTransfer }: { onTransfer: (fromId?: string) => void })
       <section>
         <SectionHeader title="Subscriptions" />
         <div className="card divide-y divide-line">
+          {SUBSCRIPTIONS.length === 0 && (
+            <div className="p-6 text-center text-sm text-muted">
+              No subscriptions tracked yet.
+            </div>
+          )}
           {SUBSCRIPTIONS.map((s) => (
             <div key={s.id} className="flex items-center gap-3 p-4">
               <span className="grid h-10 w-10 place-items-center rounded-2xl bg-canvas text-lg">{s.emoji}</span>
