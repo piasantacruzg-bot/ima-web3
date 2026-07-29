@@ -16,7 +16,6 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
   const lastNw = nw[nw.length - 1] ?? 0;
   const momChange = prevNw !== 0 ? (lastNw - prevNw) / Math.abs(prevNw) : 0;
   const showMom = prevNw !== 0 && Math.abs(lastNw - prevNw) > 0.5;
-  const creditAccounts = accounts.filter((a) => a.type === "credit");
 
   return (
     <div className="space-y-7 pb-32">
@@ -140,57 +139,28 @@ export function Home({ onTransfer }: { onTransfer: (fromId?: string) => void }) 
         </div>
       </section>
 
-      {/* Credit card due + subscriptions */}
-      <section className="px-5">
-        <SectionHeader title="Cards & subscriptions" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {creditAccounts.map((a) => {
-            const owed = Math.max(-a.balance, 0);
-            return (
-              <div key={a.id} className="card overflow-hidden p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">💳 {a.name}</span>
-                  {owed > 0 && a.dueDateISO && (
-                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">
-                      {relativeDue(a.dueDateISO)}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 text-2xl font-bold tnum">{money(owed, a.currency)}</div>
-                <div className="text-[11px] text-faint">
-                  {owed > 0 ? "Current balance owed" : "No balance owed 🎉"}
-                </div>
-              </div>
-            );
-          })}
+      {/* Subscriptions */}
+      {SUBSCRIPTIONS.length > 0 && (
+        <section className="px-5">
+          <SectionHeader title="Subscriptions" />
           <div className="card p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">🔁 Subscriptions</span>
-              <span className="text-[11px] text-faint">{SUBSCRIPTIONS.length} active</span>
+            <div className="mt-1 flex -space-x-1.5">
+              {SUBSCRIPTIONS.map((s) => (
+                <span
+                  key={s.id}
+                  title={s.name}
+                  className="grid h-8 w-8 place-items-center rounded-xl border border-surface bg-canvas text-base"
+                >
+                  {s.emoji}
+                </span>
+              ))}
             </div>
-            {SUBSCRIPTIONS.length === 0 ? (
-              <p className="mt-3 text-[11px] text-muted">No subscriptions tracked yet.</p>
-            ) : (
-              <>
-                <div className="mt-3 flex -space-x-1.5">
-                  {SUBSCRIPTIONS.map((s) => (
-                    <span
-                      key={s.id}
-                      title={s.name}
-                      className="grid h-8 w-8 place-items-center rounded-xl border border-surface bg-canvas text-base"
-                    >
-                      {s.emoji}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-3 text-[11px] text-muted">
-                  Next: <span className="font-medium text-ink">{SUBSCRIPTIONS[0].name}</span> {money(SUBSCRIPTIONS[0].amount, SUBSCRIPTIONS[0].currency)} · {relativeDue(SUBSCRIPTIONS[0].nextChargeISO)}
-                </div>
-              </>
-            )}
+            <div className="mt-3 text-[11px] text-muted">
+              Next: <span className="font-medium text-ink">{SUBSCRIPTIONS[0].name}</span> {money(SUBSCRIPTIONS[0].amount, SUBSCRIPTIONS[0].currency)} · {relativeDue(SUBSCRIPTIONS[0].nextChargeISO)}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

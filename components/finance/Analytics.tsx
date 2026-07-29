@@ -2,22 +2,19 @@
 
 import { useState } from "react";
 import { useFinance } from "@/lib/finance/store";
-import { SAVINGS_GOAL } from "@/lib/finance/data";
 import { money, moneyCompact } from "@/lib/finance/format";
-import { AreaChart, CashflowBars, Donut, ProgressRing } from "./charts";
+import { AreaChart, CashflowBars, Donut } from "./charts";
 import { InsightsFeed } from "./InsightsFeed";
 import { Segmented, SectionHeader } from "./ui";
 
 export function Analytics() {
-  const { metrics, spendByCategory, accounts, netWorthSeries, cashflowSeries, insights } =
+  const { metrics, spendByCategory, netWorthSeries, cashflowSeries, insights } =
     useFinance();
   const [range, setRange] = useState<"1M" | "6M" | "1Y">("1Y");
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const totalSpend = spendByCategory.reduce((s, c) => s + c.value, 0);
   const active = spendByCategory.find((c) => c.key === activeCat);
 
-  const debtAccounts = accounts.filter((a) => a.type === "credit" && a.balance < 0);
-  const totalDebt = metrics.debt;
   const nwValues =
     range === "1M"
       ? netWorthSeries.values.slice(-2)
@@ -25,7 +22,6 @@ export function Analytics() {
       ? netWorthSeries.values.slice(-6)
       : netWorthSeries.values;
   const hasCashflow = cashflowSeries.some((d) => d.income > 0 || d.expense > 0);
-  const hasGoal = SAVINGS_GOAL.target > 0;
 
   return (
     <div className="space-y-6 px-5 pb-32">
@@ -116,72 +112,13 @@ export function Analytics() {
         )}
       </section>
 
-      {/* Savings goal + debt payoff */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <section className="card flex flex-col items-center p-5">
-          <SectionHeader title="Savings goal" />
-          {hasGoal ? (
-            <>
-              <ProgressRing value={SAVINGS_GOAL.saved / SAVINGS_GOAL.target} size={130} color="#34d399">
-                <div className="text-center">
-                  <div className="text-xl font-bold tnum">
-                    {((SAVINGS_GOAL.saved / SAVINGS_GOAL.target) * 100).toFixed(0)}%
-                  </div>
-                  <div className="text-[10px] text-muted">{SAVINGS_GOAL.label}</div>
-                </div>
-              </ProgressRing>
-              <div className="mt-3 text-center text-sm">
-                <span className="font-semibold">{money(SAVINGS_GOAL.saved, "USD", { decimals: 0 })}</span>
-                <span className="text-muted"> of {money(SAVINGS_GOAL.target, "USD", { decimals: 0 })}</span>
-              </div>
-            </>
-          ) : (
-            <EmptyBlock emoji="🎯" text="No savings goal set yet." />
-          )}
+      {/* Summary of this month's activity */}
+      {insights.length > 0 && (
+        <section>
+          <SectionHeader title="This month" />
+          <InsightsFeed items={insights} />
         </section>
-
-        <section className="card p-5">
-          <SectionHeader title="Debt payoff" />
-          {totalDebt > 0 ? (
-            <>
-              <div className="text-2xl font-bold tracking-tight tnum text-negative">
-                {money(totalDebt, "USD", { decimals: 0 })}
-              </div>
-              <div className="text-[11px] text-faint">
-                across {debtAccounts.length} credit line{debtAccounts.length > 1 ? "s" : ""}
-              </div>
-              <div className="mt-3 space-y-2">
-                {debtAccounts.map((a) => {
-                  const util = a.creditLimit ? Math.abs(a.balance) / a.creditLimit : 0;
-                  return (
-                    <div key={a.id}>
-                      <div className="flex justify-between text-xs">
-                        <span>{a.name}</span>
-                        <span className="tnum">{money(Math.abs(a.balance), a.currency, { decimals: 0 })}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-line">
-                        <div className="h-full rounded-full bg-negative" style={{ width: `${util * 100}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <div className="py-4 text-center">
-              <div className="text-3xl">🎉</div>
-              <p className="mt-2 text-sm font-semibold text-positive">You're debt-free</p>
-              <p className="text-[11px] text-muted">No outstanding credit balances.</p>
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* All insights */}
-      <section>
-        <SectionHeader title="All insights" />
-        <InsightsFeed items={insights} />
-      </section>
+      )}
     </div>
   );
 }

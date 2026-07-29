@@ -225,21 +225,6 @@ export function generateInsights(
     }
   }
 
-  for (const a of accounts) {
-    if (a.type === "credit" && a.balance < 0 && a.creditLimit) {
-      const util = Math.abs(a.balance) / a.creditLimit;
-      if (util > 0.3) {
-        out.push({
-          id: `in-util-${a.id}`,
-          tone: "warning",
-          emoji: "💳",
-          title: `${a.name} at ${(util * 100).toFixed(0)}%`,
-          detail: `Utilization is above 30%. Paying it down helps your score.`,
-        });
-      }
-    }
-  }
-
   const expenses = transactions.filter((t) => t.amount < 0 && t.category !== "transfer" && isThisMonth(t.dateISO));
   if (expenses.length > 0) {
     const largest = expenses.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))[0];

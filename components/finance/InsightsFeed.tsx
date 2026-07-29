@@ -55,8 +55,8 @@ export function InsightsCarousel({ items }: { items: Insight[] }) {
         <div className="card flex items-center gap-3 p-4">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-canvas text-xl">💡</span>
           <p className="text-xs leading-relaxed text-muted">
-            Add your first transactions and you'll see insights here — top
-            categories, savings, card utilization and more.
+            Add your income and expenses and you'll see a summary here — top
+            categories, spending and savings this month.
           </p>
         </div>
       </div>
