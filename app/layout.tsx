@@ -2,19 +2,15 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "IMA WEB3 · Reportes de Influencers",
+  title: "Creator Campaign OS",
   description:
-    "Registra links publicados por influencers y actualiza sus metricas automaticamente en una master sheet de Google Drive.",
+    "Internal operating system for creator/influencer campaigns — creator database, campaign management, deliverable tracking, and reporting.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body>{children}</body>
+    <html lang="en">
+      <body className="font-sans">{children}</body>
     </html>
   );
 }
