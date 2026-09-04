@@ -27,7 +27,9 @@ export const creatorFormSchema = z.object({
   phone: optionalTrimmed(),
   country: optionalTrimmed(),
   city: optionalTrimmed(),
+  state_province: optionalTrimmed(),
   gender: optionalTrimmed(),
+  profile_image_url: optionalTrimmed(),
   languages: csvToArray(),
   categories: csvToArray(),
   niches: csvToArray(),
@@ -40,13 +42,13 @@ export const creatorFormSchema = z.object({
   agency_name: optionalTrimmed(),
   rate_card_notes: optionalTrimmed(),
   internal_rating: z
-    .union([z.coerce.number().min(0).max(5), z.literal("")])
+    .union([z.coerce.number().min(1, "Rating must be between 1 and 5").max(5), z.literal("")])
     .optional(),
   brand_fit_score: z
     .union([z.coerce.number().min(0).max(100), z.literal("")])
     .optional(),
-  // Newline-separated pasted social profile URLs.
-  social_urls: z.string().optional(),
+  // JSON-encoded array of SocialAccountRow (see social-accounts-field.tsx).
+  social_accounts_json: z.string().optional(),
 });
 
 export type CreatorFormValues = z.infer<typeof creatorFormSchema>;

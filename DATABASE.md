@@ -26,7 +26,7 @@ metrics history to develop and demo against.
 | Table | Purpose |
 |---|---|
 | `profiles` | 1:1 with `auth.users`; carries `role` (admin/manager/member). Auto-created on signup. |
-| `creators` | The single source of truth for a creator (rule: a creator exists once). |
+| `creators` | The single source of truth for a creator (rule: a creator exists once). `archived_at` is a soft-delete marker — archived creators are hidden from the default list but never destroyed; hard delete is admin-only. |
 | `social_accounts` | 1 creator → many social accounts. `access_token_reference` is an opaque pointer — real OAuth tokens are never stored in this table (see `API_INTEGRATIONS.md`). |
 | `creator_performance_snapshots` | Historical performance rollups tied to a creator/campaign/content — never overwritten. |
 | `campaigns` | Campaign header info, JSONB `target_audience` / `creator_requirements`. |
@@ -38,6 +38,9 @@ metrics history to develop and demo against.
 | `import_batches` / `import_rows` | CSV/XLSX import pipeline state; `raw_data` on each row is preserved forever even after normalization. |
 | `audit_log` | User/action/entity/before/after log. |
 | `app_settings` / `creator_scoring_weights` | Singleton config rows (`id = 1`), enforced via `check (id = 1)`. |
+| `creator_notes` | Free-text internal notes per creator, with author + timestamps. |
+| `creator_tags` / `creator_tag_assignments` | Flexible tags (created on the fly, not hardcoded) and their many-to-many assignment to creators. |
+| `saved_creator_filters` | A user's saved Creators-list filter/sort combinations (private per user). |
 
 Three views: `deliverables_with_computed_status` (adds a computed "late"
 status without a stored flag), `content_metrics_latest` (most recent

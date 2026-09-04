@@ -200,3 +200,82 @@ insert into story_metrics (
   ('11111111-1111-1111-1111-111111111101', '22222222-2222-2222-2222-222222222201', '33333333-3333-3333-3333-333333333301', '44444444-4444-4444-4444-444444444402', current_date - interval '8 days', 2, 16500, 14100, 38, 280, 190, 1400, 'Sandals with denim outfit'),
   ('11111111-1111-1111-1111-111111111101', '22222222-2222-2222-2222-222222222201', '33333333-3333-3333-3333-333333333301', '44444444-4444-4444-4444-444444444402', current_date - interval '7 days', 3, 15200, 13000, 30, 260, 170, 1550, 'Sandals with dress, swipe-up link')
 on conflict do nothing;
+
+-- ============================================================
+-- PHASE 2 ADDITIONS: 10 more creators (30 total) + intentional
+-- near-duplicates to exercise duplicate detection, plus tags.
+-- ============================================================
+insert into creators (
+  id, first_name, last_name, display_name, email, country, city, state_province,
+  languages, gender, categories, niches, creator_type, status, bio,
+  internal_rating, brand_fit_score, is_demo
+) values
+  ('11111111-1111-1111-1111-111111111121', 'Diego', 'Alvarado', 'Diego Alvarado', 'diego.alvarado@demo.ima', 'Colombia', 'Bogota', null, '{Spanish,English}', 'male', '{Finance}', '{personal-finance,investing}', 'micro', 'active', 'Personal finance educator for young professionals.', 4.1, 77, true),
+  ('11111111-1111-1111-1111-111111111122', 'Priya', 'Sharma', 'Priya Sharma', 'priya.sharma@demo.ima', 'Canada', 'Toronto', 'ON', '{English,Hindi}', 'female', '{Technology}', '{gadget-reviews,ai-tools}', 'mid', 'approved', 'Tech reviewer covering consumer AI tools.', 4.4, 83, true),
+  ('11111111-1111-1111-1111-111111111123', 'Jasmine', 'Lee', 'Jasmine Lee', 'jasmine.lee@demo.ima', 'Singapore', 'Singapore', null, '{English,Mandarin}', 'female', '{Beauty}', '{k-beauty,skincare}', 'micro', 'active', 'K-beauty and skincare routines.', 4.3, 80, true),
+  ('11111111-1111-1111-1111-111111111124', 'Marcus', 'Webb', 'Marcus Webb', 'marcus.webb@demo.ima', 'USA', 'Chicago', 'IL', '{English}', 'male', '{Business}', '{entrepreneurship,startups}', 'macro', 'prospect', 'Startup founder sharing business lessons.', null, null, true),
+  ('11111111-1111-1111-1111-111111111125', 'Sofia', 'Delgado', 'Sofia Delgado', 'sofia.delgado@demo.ima', 'Spain', 'Barcelona', null, '{Spanish,English}', 'female', '{Travel}', '{budget-travel,europe}', 'nano', 'approved', 'Budget travel tips across Europe.', 3.9, 68, true),
+  ('11111111-1111-1111-1111-111111111126', 'Andre', 'Silva', 'Andre Silva', 'andre.silva@demo.ima', 'Brazil', 'Sao Paulo', null, '{Portuguese,English}', 'male', '{Gaming}', '{fps,esports}', 'micro', 'active', 'Competitive FPS gaming content.', 4.0, 74, true),
+  ('11111111-1111-1111-1111-111111111127', 'Nina', 'Petrov', 'Nina Petrov', 'nina.petrov@demo.ima', 'USA', 'Miami', 'FL', '{English,Russian}', 'female', '{Luxury}', '{luxury-travel,fashion}', 'macro', 'active', 'Luxury lifestyle and high-end fashion.', 4.6, 90, true),
+  ('11111111-1111-1111-1111-111111111128', 'Kwame', 'Asante', 'Kwame Asante', 'kwame.asante@demo.ima', 'USA', 'Atlanta', 'GA', '{English}', 'male', '{Entertainment}', '{comedy-skits,music}', 'mid', 'active', 'Entertainment and comedy skits with a music angle.', 4.2, 79, true),
+  ('11111111-1111-1111-1111-111111111129', 'Lucia', 'Fernandez', 'Lucia Fernandez', 'lucia.fernandez@demo.ima', 'Mexico', 'Mexico City', null, '{Spanish,English}', 'female', '{Parenting}', '{new-moms,family-life}', 'micro', 'approved', 'Parenting content for new moms.', 4.3, 81, true),
+  ('11111111-1111-1111-1111-111111111130', 'Owen', 'Bennett', 'Owen Bennett', 'owen.bennett@demo.ima', 'USA', 'Austin', 'TX', '{English}', 'nonbinary', '{Education}', '{study-tips,online-learning}', 'nano', 'prospect', 'Study tips and online learning reviews.', null, null, true),
+  -- Intentional near-duplicates for testing duplicate detection (section 16):
+  ('11111111-1111-1111-1111-111111111131', 'Sofia', 'Martinez', 'Sofia Martinez', null, 'USA', 'Miami', 'FL', '{English}', 'female', '{Lifestyle}', '{}', 'micro', 'prospect', 'Possible duplicate of an existing Miami lifestyle creator — same name + city.', null, null, true),
+  ('11111111-1111-1111-1111-111111111132', 'Elena', 'Petroba', 'Elena Petroba', null, 'USA', 'Miami', 'FL', '{English}', 'female', '{Wellness}', '{}', 'micro', 'prospect', 'Possible duplicate — near-identical spelling to an existing Miami wellness creator.', null, null, true),
+  ('11111111-1111-1111-1111-111111111133', 'C.', 'Torres', 'C. Torres', 'camila.torres.dup@demo.ima', 'USA', 'Miami', 'FL', '{English}', 'female', '{Fashion}', '{}', 'nano', 'prospect', 'Possible duplicate — shares an email with another record.', null, null, true),
+  ('11111111-1111-1111-1111-111111111134', 'Camila', 'T', 'Camila T', 'camila.torres.dup@demo.ima', 'USA', 'Miami', 'FL', '{English}', 'female', '{Fashion}', '{}', 'nano', 'prospect', 'Possible duplicate — shares an email with another record.', null, null, true)
+on conflict (id) do nothing;
+
+insert into social_accounts (
+  id, creator_id, platform, username, profile_url, followers, following,
+  posts_count, engagement_rate, average_likes, average_comments,
+  average_views, estimated_reach, account_type, is_demo
+) values
+  ('33333333-3333-3333-3333-333333333336', '11111111-1111-1111-1111-111111111121', 'instagram', 'diegoalvaradofin', 'https://instagram.com/diegoalvaradofin', 44000, 300, 220, 3.8, 1500, 60, 16000, 22000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333337', '11111111-1111-1111-1111-111111111122', 'instagram', 'priyasharmatech', 'https://instagram.com/priyasharmatech', 68000, 420, 300, 3.4, 2000, 80, 25000, 34000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333338', '11111111-1111-1111-1111-111111111122', 'youtube', 'PriyaSharmaTech', 'https://youtube.com/@PriyaSharmaTech', 52000, 8, 130, 2.3, 1000, 90, 21000, 30000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333339', '11111111-1111-1111-1111-111111111123', 'instagram', 'jasminelee.kb', 'https://instagram.com/jasminelee.kb', 61000, 380, 290, 4.9, 2900, 130, 23000, 32000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333340', '11111111-1111-1111-1111-111111111123', 'tiktok', 'jasminelee.kb', 'https://tiktok.com/@jasminelee.kb', 84000, 190, 210, 6.7, 5200, 260, 96000, 120000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333341', '11111111-1111-1111-1111-111111111124', 'instagram', 'marcuswebbhq', 'https://instagram.com/marcuswebbhq', 190000, 600, 410, 2.1, 3400, 110, 42000, 65000, 'business', true),
+  ('33333333-3333-3333-3333-333333333342', '11111111-1111-1111-1111-111111111125', 'tiktok', 'sofiadelgadotravel', 'https://tiktok.com/@sofiadelgadotravel', 19000, 150, 90, 5.6, 900, 70, 21000, 27000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333343', '11111111-1111-1111-1111-111111111126', 'tiktok', 'andresilvafps', 'https://tiktok.com/@andresilvafps', 76000, 220, 260, 6.1, 4300, 210, 88000, 105000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333344', '11111111-1111-1111-1111-111111111126', 'youtube', 'AndreSilvaFPS', 'https://youtube.com/@AndreSilvaFPS', 39000, 6, 140, 2.0, 720, 60, 17000, 24000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333345', '11111111-1111-1111-1111-111111111127', 'instagram', 'ninapetrovluxe', 'https://instagram.com/ninapetrovluxe', 265000, 500, 620, 3.8, 8700, 320, 82000, 140000, 'business', true),
+  ('33333333-3333-3333-3333-333333333346', '11111111-1111-1111-1111-111111111127', 'x', 'ninapetrovluxe', 'https://x.com/ninapetrovluxe', 41000, 700, 3100, 1.6, 380, 30, 9800, 16000, 'personal', true),
+  ('33333333-3333-3333-3333-333333333347', '11111111-1111-1111-1111-111111111128', 'instagram', 'kwameasante', 'https://instagram.com/kwameasante', 118000, 460, 480, 4.4, 4600, 190, 44000, 62000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333348', '11111111-1111-1111-1111-111111111128', 'tiktok', 'kwameasante', 'https://tiktok.com/@kwameasante', 156000, 240, 350, 6.9, 9800, 480, 175000, 210000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333349', '11111111-1111-1111-1111-111111111128', 'youtube', 'KwameAsante', 'https://youtube.com/@KwameAsante', 47000, 9, 95, 2.4, 950, 80, 19000, 27000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333350', '11111111-1111-1111-1111-111111111129', 'instagram', 'luciafernandezmom', 'https://instagram.com/luciafernandezmom', 57000, 340, 380, 4.7, 2500, 140, 21000, 29000, 'creator', true),
+  ('33333333-3333-3333-3333-333333333351', '11111111-1111-1111-1111-111111111130', 'youtube', 'OwenBennettStudy', 'https://youtube.com/@OwenBennettStudy', 12000, 4, 60, 3.1, 260, 30, 6100, 9000, 'creator', true)
+on conflict (id) do nothing;
+
+-- Tags: flexible, created (not hardcoded into the schema) then assigned.
+insert into creator_tags (id, name) values
+  ('66666666-aaaa-4aaa-8aaa-000000000001', 'VIP'),
+  ('66666666-aaaa-4aaa-8aaa-000000000002', 'Miami'),
+  ('66666666-aaaa-4aaa-8aaa-000000000003', 'Spanish Speaking'),
+  ('66666666-aaaa-4aaa-8aaa-000000000004', 'High Engagement'),
+  ('66666666-aaaa-4aaa-8aaa-000000000005', 'UGC'),
+  ('66666666-aaaa-4aaa-8aaa-000000000006', 'Reliable'),
+  ('66666666-aaaa-4aaa-8aaa-000000000007', 'Priority')
+on conflict (id) do nothing;
+
+insert into creator_tag_assignments (creator_id, tag_id) values
+  ('11111111-1111-1111-1111-111111111101', '66666666-aaaa-4aaa-8aaa-000000000002'),
+  ('11111111-1111-1111-1111-111111111101', '66666666-aaaa-4aaa-8aaa-000000000003'),
+  ('11111111-1111-1111-1111-111111111109', '66666666-aaaa-4aaa-8aaa-000000000001'),
+  ('11111111-1111-1111-1111-111111111109', '66666666-aaaa-4aaa-8aaa-000000000007'),
+  ('11111111-1111-1111-1111-111111111127', '66666666-aaaa-4aaa-8aaa-000000000001'),
+  ('11111111-1111-1111-1111-111111111127', '66666666-aaaa-4aaa-8aaa-000000000002'),
+  ('11111111-1111-1111-1111-111111111123', '66666666-aaaa-4aaa-8aaa-000000000004'),
+  ('11111111-1111-1111-1111-111111111128', '66666666-aaaa-4aaa-8aaa-000000000004'),
+  ('11111111-1111-1111-1111-111111111102', '66666666-aaaa-4aaa-8aaa-000000000006'),
+  ('11111111-1111-1111-1111-111111111119', '66666666-aaaa-4aaa-8aaa-000000000005')
+on conflict do nothing;
+
+insert into creator_notes (creator_id, body) values
+  ('11111111-1111-1111-1111-111111111101', 'Strong for beauty and fashion campaigns. Very responsive.'),
+  ('11111111-1111-1111-1111-111111111109', 'Worked with Sunset Kicks — great results, priority for future lifestyle campaigns.'),
+  ('11111111-1111-1111-1111-111111111118', 'Do not offer gifting-only campaigns — brand-safety concerns on past work.')
+on conflict do nothing;

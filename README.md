@@ -25,9 +25,16 @@ this is an internal tool).
 ## Status
 
 Phase 1 (foundation: schema, auth, navigation, dashboard) and Phase 2
-(Creators: search, filters, profiles, create/edit) are complete. See
-`PHASE_1_SUMMARY.md` and `PHASE_2_SUMMARY.md` for what's built and what's
-next.
+(Creator Database: search, filters, profiles, create/edit, archiving,
+notes, tags, saved filters, bulk actions, export, duplicate detection and
+merge) are complete. See `PHASE_1_SUMMARY.md` and `PHASE_2_SUMMARY.md` for
+what's built and what's next.
+
+## Tests
+
+```bash
+npm test
+```
 
 ## Legacy tool
 

@@ -95,6 +95,7 @@ export type Creator = {
   phone: string | null;
   country: string | null;
   city: string | null;
+  state_province: string | null;
   languages: string[];
   gender: string | null;
   categories: string[];
@@ -110,6 +111,7 @@ export type Creator = {
   brand_fit_score: number | null;
   internal_rating: number | null;
   is_demo: boolean;
+  archived_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -389,9 +391,48 @@ export type CreatorWithStats = Creator & {
   max_followers: number;
   avg_engagement_rate: number;
   max_average_views: number;
+  max_average_likes: number;
+  max_average_comments: number;
+  max_average_shares: number;
   max_estimated_reach: number;
   campaign_count: number;
   platforms: SocialPlatform[] | null;
+  tags: string[] | null;
+  primary_platform: SocialPlatform | null;
+  primary_username: string | null;
+};
+
+export type CreatorNote = {
+  id: string;
+  creator_id: string;
+  body: string;
+  author_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreatorTag = {
+  id: string;
+  name: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type CreatorTagAssignment = {
+  id: string;
+  creator_id: string;
+  tag_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+};
+
+export type SavedCreatorFilter = {
+  id: string;
+  name: string;
+  user_id: string;
+  filter_config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 };
 
 type TableDef<Row> = {
@@ -419,6 +460,10 @@ export type Database = {
       audit_log: TableDef<AuditLogEntry>;
       app_settings: TableDef<AppSettings>;
       creator_scoring_weights: TableDef<CreatorScoringWeights>;
+      creator_notes: TableDef<CreatorNote>;
+      creator_tags: TableDef<CreatorTag>;
+      creator_tag_assignments: TableDef<CreatorTagAssignment>;
+      saved_creator_filters: TableDef<SavedCreatorFilter>;
     };
     Views: {
       creators_with_stats: { Row: CreatorWithStats; Relationships: [] };

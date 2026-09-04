@@ -1,10 +1,12 @@
 # Testing
 
-No automated test suite exists yet (no unit/integration/e2e tests are
-written in Phase 1 — `/tests` is intentionally not scaffolded empty).
-Adding Vitest/Playwright is reasonable groundwork for Phase 2 once there's
-real CRUD logic worth unit-testing; Phase 1 is mostly composition of
-Supabase queries and layout.
+`npm test` runs the Vitest suite in `tests/` — pure-logic unit tests only
+(normalization, social URL parsing, creator form validation, merge
+field-diffing). There are no integration/DB or e2e tests: everything that
+touches Supabase (queries, RLS, server actions, duplicate detection)
+needs a real project and is verified manually — see the Phase 2 section
+below. Playwright/e2e is reasonable groundwork for a later phase once
+there's a stable UI worth automating click-throughs against.
 
 ## What was verified for Phase 1 (and how)
 
@@ -41,6 +43,28 @@ Supabase queries and layout.
 - RLS behavior against real JWTs for each role (admin/manager/member).
 - Supabase Storage bucket access.
 - The `handle_new_auth_user` trigger firing on real signup.
+
+## Phase 2 manual pass
+
+Once you're on the Phase 2 migrations + seed data:
+
+1. `/creators` shows 34 seeded creators; search "Miami", filter by
+   platform/category/status, sort by followers — counts should update and
+   the URL should carry the filter state (reload the page, filters stay).
+2. Add a creator, paste a real Instagram/TikTok URL into the social
+   accounts field — it should split into platform + handle automatically.
+3. Add a creator named "Sofia Martinez" in Miami — you should get a
+   duplicate warning against the seeded "Sofia Martinez" before it saves.
+4. On a creator's profile: add a note, add a tag, change status from the
+   header dropdown (no page reload needed), archive it (disappears from
+   the default list), restore it from its own profile.
+5. From two of the seeded near-duplicate creators (e.g. the two
+   "camila.torres.dup@demo.ima" records), use "Check duplicates" → Merge,
+   resolve any conflicting fields, and confirm the merged profile shows
+   both records' social accounts/tags/notes and the other is archived.
+6. Select a few rows in the list, try a bulk status change and bulk
+   archive; export the current filtered view as CSV and as XLSX and open
+   both.
 
 Once you have a project connected (`SETUP.md`), a minimal manual pass:
 

@@ -1,11 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil, Mail, Phone, MapPin, Star } from "lucide-react";
+import { Pencil, Mail, Phone, MapPin, Star, Archive, RotateCcw, Megaphone, Users } from "lucide-react";
 import { getCreatorProfile } from "@/lib/creators";
 import { SocialAccountCard } from "@/components/creators/social-account-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Users } from "lucide-react";
+import { NotesSection } from "@/components/creators/notes-section";
+import { TagsSection } from "@/components/creators/tags-section";
+import { StatusSelect } from "@/components/creators/status-select";
+import { DuplicateCheckButton } from "@/components/creators/duplicate-check-button";
 import { formatDate } from "@/lib/format";
+import {
+  restoreCreator,
+  archiveCreator,
+  changeCreatorStatus,
+  addCreatorNote,
+  createAndAssignTag,
+  removeTagAssignment,
+  checkExistingCreatorDuplicates,
+} from "@/app/(app)/creators/actions";
 
 const STATUS_STYLES: Record<string, string> = {
   prospect: "border-line text-ink-soft",
@@ -27,38 +39,56 @@ export default async function CreatorProfilePage({
   const profile = await getCreatorProfile(id);
   if (!profile) notFound();
 
-  const { creator, socialAccounts, campaignHistory } = profile;
+  const { creator, socialAccounts, campaignHistory, notes, tags, allTags } = profile;
+  const boundChangeStatus = changeCreatorStatus.bind(null, creator.id);
+  const boundAddNote = addCreatorNote.bind(null, creator.id);
+  const boundAddTag = createAndAssignTag.bind(null, creator.id);
+  const boundRemoveTag = removeTagAssignment.bind(null, creator.id);
+  const boundArchive = archiveCreator.bind(null, creator.id);
+  const boundRestore = restoreCreator.bind(null, creator.id);
 
   return (
     <div>
+      {creator.archived_at ? (
+        <p className="mb-4 flex items-center justify-between rounded-sm border border-line bg-line-soft px-3 py-2 text-sm text-ink-soft">
+          <span>Archived {formatDate(creator.archived_at)}. Hidden from the default creator list.</span>
+          <form action={boundRestore}>
+            <button type="submit" className="btn-secondary py-1">
+              <RotateCcw size={13} strokeWidth={1.75} />
+              Restore
+            </button>
+          </form>
+        </p>
+      ) : null}
       {warnings ? (
         <p className="mb-4 rounded-sm border border-status-warning/30 bg-status-warning/5 px-3 py-2 text-sm text-status-warning">
           Creator saved, but: {warnings}
         </p>
       ) : null}
+
       <div className="mb-6 flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="font-serif text-2xl tracking-tight text-ink">
               {creator.display_name}
             </h1>
-            <span
-              className={`badge capitalize ${STATUS_STYLES[creator.status] ?? "border-line text-ink-soft"}`}
-            >
-              {creator.status.replace(/_/g, " ")}
-            </span>
+            <StatusSelect action={boundChangeStatus} defaultValue={creator.status} />
             {creator.creator_type ? (
               <span className="badge border-line capitalize text-ink-soft">
                 {creator.creator_type}
               </span>
-            )
-              : null}
+            ) : null}
+            {creator.status === "do_not_work_with" ? (
+              <span className="badge border-status-danger/30 text-status-danger">
+                Do not work with
+              </span>
+            ) : null}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-ink-soft">
             {creator.city || creator.country ? (
               <span className="flex items-center gap-1">
                 <MapPin size={14} strokeWidth={1.75} />
-                {[creator.city, creator.country].filter(Boolean).join(", ")}
+                {[creator.city, creator.state_province, creator.country].filter(Boolean).join(", ")}
               </span>
             ) : null}
             {creator.email ? (
@@ -79,12 +109,35 @@ export default async function CreatorProfilePage({
                 {creator.internal_rating}/5
               </span>
             ) : null}
+            {creator.brand_fit_score !== null ? (
+              <span>Brand fit: {creator.brand_fit_score}/100</span>
+            ) : null}
           </div>
         </div>
-        <Link href={`/creators/${creator.id}/edit`} className="btn-secondary">
-          <Pencil size={15} strokeWidth={1.75} />
-          Edit
-        </Link>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            disabled
+            title="Campaign management ships in Phase 4"
+            className="btn-secondary cursor-not-allowed opacity-50"
+          >
+            <Megaphone size={15} strokeWidth={1.75} />
+            Add to Campaign
+          </button>
+          <DuplicateCheckButton creatorId={creator.id} checkAction={checkExistingCreatorDuplicates} />
+          <Link href={`/creators/${creator.id}/edit`} className="btn-secondary">
+            <Pencil size={15} strokeWidth={1.75} />
+            Edit
+          </Link>
+          {!creator.archived_at ? (
+            <form action={boundArchive}>
+              <button type="submit" className="btn-secondary">
+                <Archive size={15} strokeWidth={1.75} />
+                Archive
+              </button>
+            </form>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-6">
@@ -96,7 +149,7 @@ export default async function CreatorProfilePage({
             {socialAccounts.length === 0 ? (
               <EmptyState
                 icon={Users}
-                title="No social accounts yet"
+                title="No social accounts connected"
                 description="Add Instagram, TikTok, YouTube, X, or Facebook accounts from the edit page."
               />
             ) : (
@@ -110,14 +163,48 @@ export default async function CreatorProfilePage({
 
           <section>
             <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">
+              Performance
+            </h2>
+            {socialAccounts.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No campaign performance data yet"
+                description="Performance accumulates automatically once this creator joins campaigns (Phase 4+)."
+              />
+            ) : (
+              <div className="card grid grid-cols-4 gap-4 p-4 text-sm">
+                {(
+                  [
+                    ["Followers", socialAccounts.reduce((m, a) => Math.max(m, a.followers ?? 0), 0)],
+                    [
+                      "Engagement",
+                      (
+                        socialAccounts.reduce((s, a) => s + (a.engagement_rate ?? 0), 0) /
+                        socialAccounts.length
+                      ).toFixed(1) + "%",
+                    ],
+                    ["Avg. views", socialAccounts.reduce((m, a) => Math.max(m, a.average_views ?? 0), 0)],
+                    [
+                      "Est. reach",
+                      socialAccounts.reduce((m, a) => Math.max(m, a.estimated_reach ?? 0), 0),
+                    ],
+                  ] as [string, number | string][]
+                ).map(([label, value]) => (
+                  <div key={label}>
+                    <p className="text-xs text-ink-soft">{label}</p>
+                    <p className="text-ink">{value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">
               Campaign history
             </h2>
             {campaignHistory.length === 0 ? (
-              <EmptyState
-                icon={Users}
-                title="No campaigns yet"
-                description="This creator hasn't been added to a campaign."
-              />
+              <EmptyState icon={Megaphone} title="No campaigns yet" description="No campaigns yet." />
             ) : (
               <ul className="card divide-y divide-line">
                 {campaignHistory.map((row) => (
@@ -182,14 +269,16 @@ export default async function CreatorProfilePage({
             </div>
           </section>
 
-          {creator.notes ? (
+          <TagsSection tags={tags} allTags={allTags} addAction={boundAddTag} removeAction={boundRemoveTag} />
+
+          {creator.bio ? (
             <section className="card p-4">
-              <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">
-                Internal notes
-              </h2>
-              <p className="whitespace-pre-wrap text-sm text-ink-soft">{creator.notes}</p>
+              <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">Bio</h2>
+              <p className="whitespace-pre-wrap text-sm text-ink-soft">{creator.bio}</p>
             </section>
           ) : null}
+
+          <NotesSection notes={notes} addAction={boundAddNote} />
         </div>
       </div>
     </div>
