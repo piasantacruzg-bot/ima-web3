@@ -385,6 +385,15 @@ export type CreatorScoringWeights = {
   updated_at: string;
 }
 
+export type CreatorWithStats = Creator & {
+  max_followers: number;
+  avg_engagement_rate: number;
+  max_average_views: number;
+  max_estimated_reach: number;
+  campaign_count: number;
+  platforms: SocialPlatform[] | null;
+};
+
 type TableDef<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -411,7 +420,9 @@ export type Database = {
       app_settings: TableDef<AppSettings>;
       creator_scoring_weights: TableDef<CreatorScoringWeights>;
     };
-    Views: { [_ in never]: never };
+    Views: {
+      creators_with_stats: { Row: CreatorWithStats; Relationships: [] };
+    };
     Functions: { [_ in never]: never };
     Enums: {
       user_role: UserRole;

@@ -12,7 +12,7 @@ function formatDate(value: string | null) {
 
 const QUICK_ACTIONS = [
   { href: "/campaigns", label: "New Campaign", icon: PlusCircle },
-  { href: "/creators", label: "Add Creator", icon: UserPlus },
+  { href: "/creators/new", label: "Add Creator", icon: UserPlus },
   { href: "/imports", label: "Import Database", icon: Upload },
   { href: "/content", label: "Add Content", icon: Link2 },
   { href: "/reports", label: "Generate Report", icon: FileBarChart },
@@ -117,7 +117,9 @@ export default async function DashboardPage() {
             <ul className="card divide-y divide-line">
               {data.recentCreators.map((c) => (
                 <li key={c.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                  <span className="text-ink">{c.display_name}</span>
+                  <Link href={`/creators/${c.id}`} className="text-ink hover:underline">
+                    {c.display_name}
+                  </Link>
                   <span className="badge border-line text-ink-soft capitalize">{c.status.replace(/_/g, " ")}</span>
                 </li>
               ))}

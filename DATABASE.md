@@ -39,9 +39,12 @@ metrics history to develop and demo against.
 | `audit_log` | User/action/entity/before/after log. |
 | `app_settings` / `creator_scoring_weights` | Singleton config rows (`id = 1`), enforced via `check (id = 1)`. |
 
-Two views: `deliverables_with_computed_status` (adds a computed "late"
-status without a stored flag) and `content_metrics_latest` (most recent
-metrics row per content post).
+Three views: `deliverables_with_computed_status` (adds a computed "late"
+status without a stored flag), `content_metrics_latest` (most recent
+metrics row per content post), and `creators_with_stats` (per-creator
+aggregates — max followers/engagement/avg. views/reach across social
+accounts, plus campaign count — used by the Creators list for
+filtering/sorting).
 
 ## Enums
 
