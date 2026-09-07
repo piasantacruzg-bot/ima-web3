@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Creator, SocialPlatform } from "@/types/database";
+import { similarity, NAME_SIMILARITY_THRESHOLD } from "@/lib/string-similarity";
 
 export interface DuplicateCandidate {
   creator: Creator;
@@ -14,26 +15,6 @@ export interface DuplicateCheckInput {
   socialHandles?: { platform: SocialPlatform; username: string }[];
   excludeCreatorId?: string;
 }
-
-// Bigram (Dice coefficient) string similarity — good enough to flag
-// "Maria Perez" vs "Maria Perèz" / "Maria  Perez" without a Postgres
-// extension or fetching the whole table client-side. 1 = identical.
-function similarity(a: string, b: string): number {
-  const bigrams = (s: string) => {
-    const norm = s.toLowerCase().trim().replace(/\s+/g, " ");
-    const grams = new Set<string>();
-    for (let i = 0; i < norm.length - 1; i++) grams.add(norm.slice(i, i + 2));
-    return grams;
-  };
-  const setA = bigrams(a);
-  const setB = bigrams(b);
-  if (setA.size === 0 || setB.size === 0) return 0;
-  let overlap = 0;
-  for (const g of setA) if (setB.has(g)) overlap++;
-  return (2 * overlap) / (setA.size + setB.size);
-}
-
-const NAME_SIMILARITY_THRESHOLD = 0.7;
 
 export async function findDuplicateCandidates(
   input: DuplicateCheckInput

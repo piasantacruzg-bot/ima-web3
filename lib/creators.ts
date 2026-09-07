@@ -227,6 +227,13 @@ export interface CreatorNoteWithAuthor {
   author_name: string | null;
 }
 
+export interface CreatorProvenanceEntry {
+  batchId: string;
+  sourceFilename: string;
+  createdAt: string;
+  kind: "created" | "updated";
+}
+
 export interface CreatorProfile {
   creator: Creator;
   socialAccounts: SocialAccount[];
@@ -234,6 +241,7 @@ export interface CreatorProfile {
   notes: CreatorNoteWithAuthor[];
   tags: { id: string; name: string }[];
   allTags: { id: string; name: string }[];
+  provenance: CreatorProvenanceEntry[];
 }
 
 export async function getCreatorProfile(id: string): Promise<CreatorProfile | null> {
@@ -246,6 +254,7 @@ export async function getCreatorProfile(id: string): Promise<CreatorProfile | nu
     { data: notes },
     { data: tagAssignments },
     { data: allTags },
+    { data: provenanceRows },
   ] = await Promise.all([
     supabase.from("creators").select("*").eq("id", id).maybeSingle(),
     supabase
@@ -270,6 +279,11 @@ export async function getCreatorProfile(id: string): Promise<CreatorProfile | nu
       .select("creator_tags(id, name)")
       .eq("creator_id", id),
     supabase.from("creator_tags").select("id, name").order("name"),
+    supabase
+      .from("import_rows")
+      .select("status, created_creator_id, possible_duplicate_creator_id, import_batches(id, source_filename, created_at)")
+      .or(`created_creator_id.eq.${id},possible_duplicate_creator_id.eq.${id}`)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (!creator) return null;
@@ -300,5 +314,21 @@ export async function getCreatorProfile(id: string): Promise<CreatorProfile | nu
       .map((row) => (row as unknown as { creator_tags: { id: string; name: string } | null }).creator_tags)
       .filter((t): t is { id: string; name: string } => Boolean(t)),
     allTags: allTags ?? [],
+    provenance: (provenanceRows ?? [])
+      .map((row) => {
+        const batch = (
+          row as unknown as {
+            import_batches: { id: string; source_filename: string; created_at: string } | null;
+          }
+        ).import_batches;
+        if (!batch) return null;
+        return {
+          batchId: batch.id,
+          sourceFilename: batch.source_filename,
+          createdAt: batch.created_at,
+          kind: row.created_creator_id === id ? ("created" as const) : ("updated" as const),
+        };
+      })
+      .filter((entry): entry is CreatorProvenanceEntry => Boolean(entry)),
   };
 }

@@ -30,6 +30,7 @@ function makeCreator(overrides: Partial<Creator>): Creator {
     internal_rating: null,
     is_demo: false,
     archived_at: null,
+    custom_fields: {},
     created_by: null,
     created_at: "",
     updated_at: "",

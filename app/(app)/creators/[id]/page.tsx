@@ -39,7 +39,8 @@ export default async function CreatorProfilePage({
   const profile = await getCreatorProfile(id);
   if (!profile) notFound();
 
-  const { creator, socialAccounts, campaignHistory, notes, tags, allTags } = profile;
+  const { creator, socialAccounts, campaignHistory, notes, tags, allTags, provenance } = profile;
+  const customFieldEntries = Object.entries(creator.custom_fields);
   const boundChangeStatus = changeCreatorStatus.bind(null, creator.id);
   const boundAddNote = addCreatorNote.bind(null, creator.id);
   const boundAddTag = createAndAssignTag.bind(null, creator.id);
@@ -270,6 +271,40 @@ export default async function CreatorProfilePage({
           </section>
 
           <TagsSection tags={tags} allTags={allTags} addAction={boundAddTag} removeAction={boundRemoveTag} />
+
+          {customFieldEntries.length > 0 ? (
+            <section className="card p-4">
+              <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">
+                Additional fields
+              </h2>
+              <dl className="space-y-2 text-sm">
+                {customFieldEntries.map(([key, value]) => (
+                  <div key={key}>
+                    <dt className="text-xs text-ink-soft">{key}</dt>
+                    <dd className="text-ink">{String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
+
+          {provenance.length > 0 ? (
+            <section className="card p-4">
+              <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">
+                Data source
+              </h2>
+              <ul className="space-y-2 text-sm">
+                {provenance.map((entry, i) => (
+                  <li key={`${entry.batchId}-${i}`}>
+                    <Link href={`/imports/${entry.batchId}`} className="text-ink underline">
+                      {entry.kind === "created" ? "Imported from" : "Updated by"} {entry.sourceFilename}
+                    </Link>
+                    <p className="text-xs text-ink-soft">{formatDate(entry.createdAt)}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {creator.bio ? (
             <section className="card p-4">

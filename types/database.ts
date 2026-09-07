@@ -72,7 +72,15 @@ export type ImportBatchStatus =
   | "importing"
   | "completed"
   | "failed";
-export type ImportRowStatus = "pending" | "imported" | "duplicate" | "error" | "skipped";
+export type ImportRowStatus =
+  | "pending"
+  | "imported"
+  | "duplicate"
+  | "error"
+  | "skipped"
+  | "existing"
+  | "ignored";
+export type ImportRowAction = "create" | "update" | "merge" | "keep_separate" | "skip" | "ignore";
 export type DuplicateResolution = "unresolved" | "merged" | "kept_separate";
 
 export type Profile = {
@@ -112,6 +120,7 @@ export type Creator = {
   internal_rating: number | null;
   is_demo: boolean;
   archived_at: string | null;
+  custom_fields: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -153,6 +162,7 @@ export type CreatorPerformanceSnapshot = {
   social_account_id: string | null;
   campaign_id: string | null;
   content_id: string | null;
+  import_id: string | null;
   snapshot_date: string;
   followers: number | null;
   reach: number | null;
@@ -333,6 +343,15 @@ export type ImportBatch = {
   error_rows: number;
   error_message: string | null;
   uploaded_by: string | null;
+  source_name: string | null;
+  new_creators: number;
+  existing_creators: number;
+  potential_duplicates: number;
+  new_social_accounts: number;
+  updated_fields: number;
+  started_at: string | null;
+  rolled_back_at: string | null;
+  metadata: Record<string, unknown>;
   created_at: string;
   completed_at: string | null;
 }
@@ -341,11 +360,18 @@ export type ImportRow = {
   id: string;
   batch_id: string;
   row_number: number;
+  source_sheet: string | null;
   raw_data: Record<string, unknown>;
   normalized_data: Record<string, unknown> | null;
   status: ImportRowStatus;
   possible_duplicate_creator_id: string | null;
   duplicate_resolution: DuplicateResolution;
+  match_confidence: number | null;
+  match_reasons: string[];
+  warnings: string[];
+  action: ImportRowAction | null;
+  processed_at: string | null;
+  previous_creator_snapshot: Record<string, unknown> | null;
   error_message: string | null;
   created_creator_id: string | null;
   created_at: string;

@@ -24,11 +24,13 @@ this is an internal tool).
 
 ## Status
 
-Phase 1 (foundation: schema, auth, navigation, dashboard) and Phase 2
+Phase 1 (foundation: schema, auth, navigation, dashboard), Phase 2
 (Creator Database: search, filters, profiles, create/edit, archiving,
 notes, tags, saved filters, bulk actions, export, duplicate detection and
-merge) are complete. See `PHASE_1_SUMMARY.md` and `PHASE_2_SUMMARY.md` for
-what's built and what's next.
+merge), and Phase 3 (CSV/XLSX import: column detection, normalization,
+deterministic duplicate matching, safe merge, historical-data preservation,
+and rollback) are complete. See `PHASE_1_SUMMARY.md`, `PHASE_2_SUMMARY.md`,
+and `PHASE_3_SUMMARY.md` for what's built and what's next.
 
 ## Tests
 
