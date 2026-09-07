@@ -37,7 +37,12 @@ export type CampaignCreatorStatus =
   | "contracted"
   | "active"
   | "completed"
-  | "removed";
+  | "removed"
+  | "declined"
+  | "not_available";
+// A creator not yet in `campaign_creators` is implicitly "recommended" —
+// the matching service computes that live, it's never a stored value here.
+export type CampaignCreatorSelectionStatus = "shortlisted" | "selected" | "rejected";
 export type PaymentStatus = "unpaid" | "invoiced" | "partial" | "paid";
 export type ContractStatus = "not_sent" | "sent" | "negotiating" | "signed" | "declined";
 export type BriefingStatus = "not_sent" | "sent" | "acknowledged" | "in_progress" | "complete";
@@ -193,10 +198,37 @@ export type CreatorRequirements = {
   min_followers?: number;
   max_followers?: number;
   min_engagement?: number;
+  max_engagement?: number;
+  min_average_views?: number;
+  max_average_views?: number;
+  min_brand_fit?: number;
+  min_rating?: number;
   creator_types?: CreatorType[];
+  categories?: string[];
   locations?: string[];
+  languages?: string[];
+  // Overrides the default "approved/active only" recommendation rule
+  // (spec section 8) — never includes "do_not_work_with" unless a human
+  // explicitly adds it here.
+  allowed_statuses?: CreatorStatus[];
   budget_per_creator?: number;
   creator_count?: number;
+}
+
+// Per-campaign override of the default matching weights (spec section 15).
+// Missing keys fall back to the system default for that criterion — an
+// empty object means "use all defaults."
+export type MatchingWeights = {
+  platform?: number;
+  category?: number;
+  location?: number;
+  followers?: number;
+  engagement?: number;
+  views?: number;
+  brandFit?: number;
+  rating?: number;
+  historicalPerformance?: number;
+  costEfficiency?: number;
 }
 
 export type Campaign = {
@@ -213,12 +245,29 @@ export type Campaign = {
   end_date: string | null;
   budget: number | null;
   status: CampaignStatus;
+  // Free-text objective notes (structured objectives live in
+  // primary_objective / secondary_objectives below).
   campaign_objectives: string | null;
+  primary_objective: string | null;
+  secondary_objectives: string[];
+  language: string[];
   target_audience: TargetAudience;
   target_categories: string[];
   target_platforms: SocialPlatform[];
   creator_requirements: CreatorRequirements;
+  matching_weights: MatchingWeights;
+  creator_budget: number | null;
+  production_budget: number | null;
+  paid_media_budget: number | null;
+  agency_fee: number | null;
+  other_budget: number | null;
+  // Campaign-specific exclusions — never mutate the creator database.
+  excluded_creator_ids: string[];
+  excluded_categories: string[];
+  excluded_locations: string[];
   notes: string | null;
+  owner_id: string | null;
+  archived_at: string | null;
   is_demo: boolean;
   created_by: string | null;
   created_at: string;
@@ -230,16 +279,53 @@ export type CampaignCreator = {
   campaign_id: string;
   creator_id: string;
   status: CampaignCreatorStatus;
+  selection_status: CampaignCreatorSelectionStatus | null;
   negotiated_fee: number | null;
   approved_fee: number | null;
+  proposed_fee: number | null;
+  currency: string | null;
+  fee_type: string | null;
   payment_status: PaymentStatus;
   contract_status: ContractStatus;
   briefing_status: BriefingStatus;
   match_score: number | null;
   match_reasons: string[];
+  match_breakdown: Record<string, number>;
   notes: string | null;
   added_by: string | null;
   added_at: string;
+  selected_at: string | null;
+  removed_at: string | null;
+  updated_at: string;
+}
+
+export type CampaignDeliverableTemplate = {
+  id: string;
+  campaign_id: string;
+  platform: SocialPlatform;
+  content_type: DeliverableContentType;
+  quantity: number;
+  default_due_date: string | null;
+  instructions: string | null;
+  usage_rights: string | null;
+  paid_media_rights: boolean;
+  exclusivity_requirements: string | null;
+  approval_required: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
+export type CampaignTemplate = {
+  id: string;
+  name: string;
+  description: string | null;
+  campaign_type: string | null;
+  default_objectives: Record<string, unknown>;
+  default_requirements: CreatorRequirements;
+  default_deliverables: Record<string, unknown>[];
+  default_matching_weights: MatchingWeights;
+  created_by: string | null;
+  created_at: string;
   updated_at: string;
 }
 
@@ -247,6 +333,7 @@ export type Deliverable = {
   id: string;
   campaign_id: string;
   creator_id: string;
+  template_id: string | null;
   platform: SocialPlatform;
   content_type: DeliverableContentType;
   quantity: number;
@@ -477,6 +564,8 @@ export type Database = {
       creator_performance_snapshots: TableDef<CreatorPerformanceSnapshot>;
       campaigns: TableDef<Campaign>;
       campaign_creators: TableDef<CampaignCreator>;
+      campaign_deliverable_templates: TableDef<CampaignDeliverableTemplate>;
+      campaign_templates: TableDef<CampaignTemplate>;
       deliverables: TableDef<Deliverable>;
       content_posts: TableDef<ContentPost>;
       content_metrics: TableDef<ContentMetrics>;

@@ -279,3 +279,54 @@ insert into creator_notes (creator_id, body) values
   ('11111111-1111-1111-1111-111111111109', 'Worked with Sunset Kicks — great results, priority for future lifestyle campaigns.'),
   ('11111111-1111-1111-1111-111111111118', 'Do not offer gifting-only campaigns — brand-safety concerns on past work.')
 on conflict do nothing;
+
+-- ============================================================
+-- CAMPAIGN DELIVERABLE TEMPLATES (Phase 4)
+-- ============================================================
+-- What each campaign expects from *any* selected creator, before any
+-- creator is selected — auto-assignment turns these into real per-creator
+-- `deliverables` rows once a creator's selection_status becomes 'selected'.
+insert into campaign_deliverable_templates (
+  id, campaign_id, platform, content_type, quantity, default_due_date,
+  instructions, usage_rights, paid_media_rights, exclusivity_requirements,
+  approval_required, notes
+) values
+  ('77777777-7777-4777-8777-000000000001', '22222222-2222-2222-2222-222222222201', 'instagram', 'instagram_reel', 1, current_date + interval '5 days', 'Feature the summer sandal line in a lifestyle Reel.', '3-month organic usage rights', true, 'No competing footwear brands during campaign window.', true, null),
+  ('77777777-7777-4777-8777-000000000002', '22222222-2222-2222-2222-222222222201', 'instagram', 'instagram_story', 3, current_date + interval '3 days', 'Story series styling the sandals 3 ways.', '3-month organic usage rights', false, null, false, null),
+  ('77777777-7777-4777-8777-000000000003', '22222222-2222-2222-2222-222222222201', 'tiktok', 'tiktok', 1, current_date + interval '6 days', 'TikTok GRWM featuring the sandals.', '3-month organic usage rights', true, null, true, null),
+  ('77777777-7777-4777-8777-000000000004', '22222222-2222-2222-2222-222222222203', 'instagram', 'instagram_reel', 1, current_date + interval '20 days', 'Home-workout Reel featuring the FitPulse app.', '6-month organic usage rights', true, null, true, 'App install link required in caption.'),
+  ('77777777-7777-4777-8777-000000000005', '22222222-2222-2222-2222-222222222203', 'tiktok', 'tiktok', 1, current_date + interval '25 days', 'Workout routine TikTok using the app.', '6-month organic usage rights', false, null, true, null)
+on conflict (id) do nothing;
+
+-- ============================================================
+-- CAMPAIGN TEMPLATES (Phase 4) — reusable starting points for "Create
+-- Campaign from Template" (architecture only; no dedicated UI yet, see
+-- PHASE_4_SUMMARY.md known limitations).
+-- ============================================================
+insert into campaign_templates (
+  id, name, description, campaign_type, default_objectives,
+  default_requirements, default_deliverables, default_matching_weights, created_by
+) values
+  (
+    '88888888-8888-4888-8888-000000000001',
+    'Product Launch Starter',
+    'Default requirements and deliverables for a typical product launch campaign.',
+    'Product Launch',
+    '{"primary_objective": "Awareness", "secondary_objectives": ["Engagement", "Content Creation"]}',
+    '{"min_followers": 20000, "min_engagement": 3, "creator_types": ["micro", "mid"], "allowed_statuses": ["approved", "active"]}',
+    '[{"platform": "instagram", "content_type": "instagram_reel", "quantity": 1}, {"platform": "instagram", "content_type": "instagram_story", "quantity": 2}]',
+    '{}',
+    null
+  ),
+  (
+    '88888888-8888-4888-8888-000000000002',
+    'UGC Campaign Starter',
+    'Default requirements and deliverables for a UGC-focused campaign.',
+    'UGC',
+    '{"primary_objective": "Content Creation", "secondary_objectives": ["UGC"]}',
+    '{"min_followers": 5000, "max_followers": 50000, "creator_types": ["nano", "micro"], "allowed_statuses": ["approved", "active"]}',
+    '[{"platform": "tiktok", "content_type": "tiktok", "quantity": 1}, {"platform": "instagram", "content_type": "instagram_post", "quantity": 1}]',
+    '{}',
+    null
+  )
+on conflict (id) do nothing;

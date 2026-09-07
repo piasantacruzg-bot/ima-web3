@@ -1,15 +1,6 @@
-import { Instagram, Music2, Youtube, Twitter, Facebook, Link2 } from "lucide-react";
 import type { SocialAccount } from "@/types/database";
 import { formatCompactNumber, formatPercent } from "@/lib/format";
-
-const PLATFORM_ICON = {
-  instagram: Instagram,
-  tiktok: Music2,
-  youtube: Youtube,
-  x: Twitter,
-  facebook: Facebook,
-  other: Link2,
-} as const;
+import { PLATFORM_ICON } from "@/components/platform-icon";
 
 export function SocialAccountCard({ account }: { account: SocialAccount }) {
   const Icon = PLATFORM_ICON[account.platform];
