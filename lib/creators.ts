@@ -120,7 +120,14 @@ async function applyCreatorFilters(
     query = query.lte("internal_rating", filters.maxRating);
   }
 
-  return query;
+  // Wrapped in an object rather than returned bare: postgrest-js query
+  // builders are "thenable" (awaiting one executes the request), so
+  // `return query` from this async function would make JS's promise
+  // resolution treat it as a promise to chain onto — silently running the
+  // query early and resolving to `{data, error, count}` instead of handing
+  // back the still-buildable query. Wrapping it in a plain object sidesteps
+  // that.
+  return { query };
 }
 
 export async function getCreators({
@@ -133,7 +140,7 @@ export async function getCreators({
   page?: number;
 }): Promise<{ creators: CreatorWithStats[]; total: number; pageSize: number }> {
   const supabase = await createClient();
-  let query = await applyCreatorFilters(
+  let { query } = await applyCreatorFilters(
     supabase,
     supabase.from("creators_with_stats").select("*", { count: "exact" }),
     filters
@@ -163,7 +170,7 @@ export async function getAllMatchingCreators(
   sort: CreatorSortKey = "recently_added"
 ): Promise<CreatorWithStats[]> {
   const supabase = await createClient();
-  let query = await applyCreatorFilters(
+  let { query } = await applyCreatorFilters(
     supabase,
     supabase.from("creators_with_stats").select("*"),
     filters
