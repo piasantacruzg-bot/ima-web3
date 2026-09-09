@@ -518,6 +518,8 @@ export type Notification = {
   content_post_id: string | null;
   read_at: string | null;
   created_at: string;
+  email_sent_at: string | null;
+  email_error: string | null;
 }
 
 export type ContentStatus = "active" | "unavailable";
