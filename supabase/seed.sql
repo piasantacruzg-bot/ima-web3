@@ -458,3 +458,171 @@ insert into content_submissions (
   ('99999999-9999-4999-8999-000000000021', '44444444-4444-4444-4444-444444444412', 1, 'https://drive.example/draft-v1', 'Draft cut — sunset cruise', 'revision_requested', now() - interval '9 days', now() - interval '8 days'),
   ('99999999-9999-4999-8999-000000000022', '44444444-4444-4444-4444-444444444412', 2, 'https://instagram.com/reel/meridian-valentina-001', 'Final cut — sunset cruise', 'approved', now() - interval '7 days', now() - interval '7 days')
 on conflict (id) do nothing;
+
+-- ============================================================
+-- PHASE 6: expand "Luxury Miami Launch" to all 10 creators (spec
+-- section 48's acceptance test: 10 Reels, 30 Story instances, 10
+-- TikToks, 20 X Posts = 70 independently-trackable items total).
+-- Valentina Cruz's 7 items already exist above (Phase 5) — this adds
+-- the other 9 creators' 7 each. Guarded so re-running seed.sql doesn't
+-- duplicate it.
+-- ============================================================
+do $$
+declare
+  r record;
+  new_reel_id uuid;
+  new_story_deliverable_id uuid;
+  new_tiktok_id uuid;
+  new_x1_id uuid;
+  new_x2_id uuid;
+  new_story_instance_id uuid;
+  new_content_post_id uuid;
+  base_views bigint;
+  base_engagements bigint;
+  seq int;
+  i int := 0;
+begin
+  if exists (
+    select 1 from deliverables
+    where campaign_id = '22222222-2222-2222-2222-222222222206'
+      and creator_id <> '11111111-1111-1111-1111-111111111109'
+  ) then
+    return;
+  end if;
+
+  for r in
+    select * from (values
+      ('11111111-1111-1111-1111-111111111101'::uuid, '66666666-6666-6666-6666-666666666611'::uuid, '33333333-3333-3333-3333-333333333301'::uuid, '33333333-3333-3333-3333-333333333302'::uuid, null::uuid, 'Sofia Martinez'),
+      ('11111111-1111-1111-1111-111111111102'::uuid, '66666666-6666-6666-6666-666666666612'::uuid, '33333333-3333-3333-3333-333333333303'::uuid, '33333333-3333-3333-3333-333333333304'::uuid, null::uuid, 'Diego Ramirez'),
+      ('11111111-1111-1111-1111-111111111103'::uuid, '66666666-6666-6666-6666-666666666613'::uuid, '33333333-3333-3333-3333-333333333305'::uuid, null::uuid, null::uuid, 'Ava Chen'),
+      ('11111111-1111-1111-1111-111111111104'::uuid, '66666666-6666-6666-6666-666666666614'::uuid, '33333333-3333-3333-3333-333333333307'::uuid, null::uuid, '33333333-3333-3333-3333-333333333308'::uuid, 'Marcus Johnson'),
+      ('11111111-1111-1111-1111-111111111105'::uuid, '66666666-6666-6666-6666-666666666615'::uuid, '33333333-3333-3333-3333-333333333309'::uuid, '33333333-3333-3333-3333-333333333310'::uuid, null::uuid, 'Isabella Rossi'),
+      ('11111111-1111-1111-1111-111111111107'::uuid, '66666666-6666-6666-6666-666666666616'::uuid, '33333333-3333-3333-3333-333333333313'::uuid, null::uuid, null::uuid, 'Camila Torres'),
+      ('11111111-1111-1111-1111-111111111113'::uuid, '66666666-6666-6666-6666-666666666618'::uuid, '33333333-3333-3333-3333-333333333324'::uuid, null::uuid, null::uuid, 'Zoe Bennett'),
+      ('11111111-1111-1111-1111-111111111119'::uuid, '66666666-6666-6666-6666-666666666619'::uuid, '33333333-3333-3333-3333-333333333333'::uuid, '33333333-3333-3333-3333-333333333334'::uuid, null::uuid, 'Elena Petrova'),
+      ('11111111-1111-1111-1111-111111111127'::uuid, '66666666-6666-6666-6666-666666666620'::uuid, '33333333-3333-3333-3333-333333333345'::uuid, null::uuid, '33333333-3333-3333-3333-333333333346'::uuid, 'Nina Petrov')
+    ) as t(creator_id, campaign_creator_id, ig_account, tt_account, x_account, creator_name)
+  loop
+    i := i + 1;
+    base_views := 40000 + i * 11000;
+    base_engagements := (base_views * 0.07)::bigint + 40 + i * 8;
+
+    -- 1 Instagram Reel.
+    insert into deliverables (id, campaign_id, creator_id, campaign_creator_id, platform, content_type, title, quantity, due_date, status, caption_required, approval_required, usage_rights, paid_media_rights, published_url, published_at)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, 'instagram', 'instagram_reel', r.creator_name || ' — Meridian 58 Reel', 1, current_date - (5 + i), 'published', true, true, '6-month organic + paid usage rights', true, 'https://instagram.com/reel/meridian-launch-' || i || '-001', now() - ((5 + i) * interval '1 day'))
+    returning id into new_reel_id;
+
+    insert into content_posts (id, campaign_id, creator_id, campaign_creator_id, deliverable_id, social_account_id, platform, content_type, post_url, caption, published_at, collection_method, sync_status)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, new_reel_id, r.ig_account, 'instagram', 'instagram_reel', 'https://instagram.com/reel/meridian-launch-' || i || '-001', r.creator_name || ' on the Meridian 58 #ad', now() - ((5 + i) * interval '1 day'), 'manual', 'never_synced')
+    returning id into new_content_post_id;
+
+    insert into content_metrics (content_id, captured_at, source, views, reach, impressions, likes, comments, shares, saves, engagements, engagement_rate, engagement_rate_method)
+    values (
+      new_content_post_id, now() - ((4 + i) * interval '1 day'), 'manual',
+      base_views, (base_views * 0.8)::bigint, (base_views * 1.15)::bigint,
+      (base_views * 0.06)::bigint, 40 + i * 6, 15 + i * 4, 25 + i * 5,
+      base_engagements, round((base_engagements::numeric / (base_views * 0.8)::numeric) * 100, 2), 'reach'
+    );
+
+    -- 3 Instagram Story instances (one deliverable, quantity 3).
+    insert into deliverables (id, campaign_id, creator_id, campaign_creator_id, platform, content_type, title, quantity, due_date, status, caption_required, approval_required, usage_rights, paid_media_rights)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, 'instagram', 'instagram_story', r.creator_name || ' — Meridian 58 Stories', 3, current_date - (4 + i), 'published', false, false, '3-month organic usage rights', false)
+    returning id into new_story_deliverable_id;
+
+    for seq in 1..3 loop
+      insert into story_instances (id, deliverable_id, sequence_number, status, published_at)
+      values (gen_random_uuid(), new_story_deliverable_id, seq, 'published', now() - ((4 + i) * interval '1 day'))
+      returning id into new_story_instance_id;
+
+      insert into content_evidence (story_instance_id, evidence_type, notes)
+      values (new_story_instance_id, 'screenshot', 'Demo screenshot on file (placeholder — real upload pending).');
+
+      insert into content_metrics (story_instance_id, captured_at, source, views, reach, replies, sticker_taps, exits)
+      values (
+        new_story_instance_id, now() - ((4 + i) * interval '1 day'), 'manual',
+        (base_views * 0.22)::bigint - seq * 350, (base_views * 0.19)::bigint - seq * 280,
+        8 + seq + i, 100 + seq * 20 + i * 5, 500 + seq * 40 + i * 10
+      );
+    end loop;
+
+    -- 1 TikTok.
+    insert into deliverables (id, campaign_id, creator_id, campaign_creator_id, platform, content_type, title, quantity, due_date, status, caption_required, approval_required, usage_rights, paid_media_rights, published_url, published_at)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, 'tiktok', 'tiktok', r.creator_name || ' — Meridian 58 TikTok', 1, current_date - (3 + i), 'published', true, true, '6-month organic usage rights', true, 'https://tiktok.com/@meridian-launch-' || i, now() - ((3 + i) * interval '1 day'))
+    returning id into new_tiktok_id;
+
+    insert into content_posts (id, campaign_id, creator_id, campaign_creator_id, deliverable_id, social_account_id, platform, content_type, post_url, caption, published_at, collection_method, sync_status)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, new_tiktok_id, r.tt_account, 'tiktok', 'tiktok', 'https://tiktok.com/@meridian-launch-' || i, r.creator_name || ' — a day on the Meridian 58 #ad', now() - ((3 + i) * interval '1 day'), 'manual', 'never_synced')
+    returning id into new_content_post_id;
+
+    insert into content_metrics (content_id, captured_at, source, views, reach, impressions, likes, comments, shares, saves, engagements, engagement_rate, engagement_rate_method)
+    values (
+      new_content_post_id, now() - ((2 + i) * interval '1 day'), 'manual',
+      base_views * 3, (base_views * 2)::bigint, (base_views * 3.4)::bigint,
+      (base_views * 0.35)::bigint, 300 + i * 30, 100 + i * 15, 80 + i * 12,
+      (base_views * 0.35)::bigint + 300 + i * 30 + 100 + i * 15 + 80 + i * 12,
+      round((((base_views * 0.35)::bigint + 300 + i * 30 + 100 + i * 15 + 80 + i * 12)::numeric / (base_views * 2)::numeric) * 100, 2), 'reach'
+    );
+
+    -- 2 X Posts (separate deliverables — only Stories get per-instance
+    -- splitting in this schema, spec section 41's own architecture note).
+    insert into deliverables (id, campaign_id, creator_id, campaign_creator_id, platform, content_type, title, quantity, due_date, status, caption_required, approval_required, usage_rights, paid_media_rights, published_url, published_at)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, 'x', 'x_post', r.creator_name || ' — Meridian 58 X Post #1', 1, current_date - (2 + i), 'published', false, false, '3-month organic usage rights', false, 'https://x.com/meridian-launch-' || i || '-1', now() - ((2 + i) * interval '1 day'))
+    returning id into new_x1_id;
+
+    insert into content_posts (id, campaign_id, creator_id, campaign_creator_id, deliverable_id, social_account_id, platform, content_type, post_url, caption, published_at, collection_method, sync_status)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, new_x1_id, r.x_account, 'x', 'x_post', 'https://x.com/meridian-launch-' || i || '-1', r.creator_name || ' on the Meridian 58 launch #ad', now() - ((2 + i) * interval '1 day'), 'manual', 'never_synced')
+    returning id into new_content_post_id;
+
+    insert into content_metrics (content_id, captured_at, source, impressions, likes, comments, reposts, engagements, engagement_rate, engagement_rate_method)
+    values (
+      new_content_post_id, now() - ((1 + i) * interval '1 day'), 'manual',
+      (base_views * 0.5)::bigint, 40 + i * 15, 10 + i * 3, 15 + i * 4,
+      40 + i * 15 + 10 + i * 3 + 15 + i * 4,
+      round(((40 + i * 15 + 10 + i * 3 + 15 + i * 4)::numeric / (base_views * 0.5)::numeric) * 100, 2), 'impressions'
+    );
+
+    insert into deliverables (id, campaign_id, creator_id, campaign_creator_id, platform, content_type, title, quantity, due_date, status, caption_required, approval_required, usage_rights, paid_media_rights, published_url, published_at)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, 'x', 'x_post', r.creator_name || ' — Meridian 58 X Post #2', 1, current_date - (1 + i), 'published', false, false, '3-month organic usage rights', false, 'https://x.com/meridian-launch-' || i || '-2', now() - ((1 + i) * interval '1 day'))
+    returning id into new_x2_id;
+
+    insert into content_posts (id, campaign_id, creator_id, campaign_creator_id, deliverable_id, social_account_id, platform, content_type, post_url, caption, published_at, collection_method, sync_status)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222206', r.creator_id, r.campaign_creator_id, new_x2_id, r.x_account, 'x', 'x_post', 'https://x.com/meridian-launch-' || i || '-2', r.creator_name || ' — more from the launch cruise', now() - ((1 + i) * interval '1 day'), 'manual', 'never_synced')
+    returning id into new_content_post_id;
+
+    insert into content_metrics (content_id, captured_at, source, impressions, likes, comments, reposts, engagements, engagement_rate, engagement_rate_method)
+    values (
+      new_content_post_id, now() - (i * interval '12 hours'), 'manual',
+      (base_views * 0.6)::bigint, 55 + i * 18, 14 + i * 4, 20 + i * 5,
+      55 + i * 18 + 14 + i * 4 + 20 + i * 5,
+      round(((55 + i * 18 + 14 + i * 4 + 20 + i * 5)::numeric / (base_views * 0.6)::numeric) * 100, 2), 'impressions'
+    );
+  end loop;
+end $$;
+
+-- ============================================================
+-- PHASE 6: demo integration states (spec section 47) — real DB rows,
+-- clearly is_demo, never a fabricated live API session. Instagram and
+-- TikTok show "Connected" (one healthy account each among many
+-- not-connected ones, hence "Partially available" overall); X shows
+-- "Needs reauthorization"; Google Drive has no per-account state and
+-- correctly stays "Not connected" until GOOGLE_DRIVE_CLIENT_ID etc. are
+-- actually configured — that's not faked here.
+-- ============================================================
+update social_accounts
+set oauth_status = 'connected', sync_status = 'synced', last_synced_at = now() - interval '2 hours'
+where id = '33333333-3333-3333-3333-333333333301'; -- Sofia Martinez, Instagram
+
+update social_accounts
+set oauth_status = 'connected', sync_status = 'synced', last_synced_at = now() - interval '5 hours'
+where id = '33333333-3333-3333-3333-333333333304'; -- Diego Ramirez, TikTok
+
+update social_accounts
+set oauth_status = 'expired', sync_status = 'error', sync_error = 'Token expired — reconnect required.'
+where id = '33333333-3333-3333-3333-333333333308'; -- Marcus Johnson, X
+
+insert into integration_sync_logs (provider, social_account_id, sync_type, started_at, completed_at, status, records_found, records_created, records_updated, records_skipped, records_failed)
+values
+  ('instagram', '33333333-3333-3333-3333-333333333301', 'account', now() - interval '2 hours 5 minutes', now() - interval '2 hours', 'completed', 3, 0, 3, 0, 0),
+  ('tiktok', '33333333-3333-3333-3333-333333333304', 'account', now() - interval '5 hours 5 minutes', now() - interval '5 hours', 'completed', 1, 0, 1, 0, 0),
+  ('x', '33333333-3333-3333-3333-333333333308', 'account', now() - interval '1 day', now() - interval '1 day', 'failed', 0, 0, 0, 0, 1)
+on conflict do nothing;

@@ -3,9 +3,8 @@
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
-// Searches creators by name today. Campaigns/brands/handles/content URLs
-// join once those modules exist (spec section 37) — this isn't a fake
-// search box, it's just scoped to what's actually indexed so far.
+// Searches campaigns, creators, deliverables, content posts, and social
+// usernames/URLs/platform post IDs (spec section 37) via /search.
 export function GlobalSearch() {
   const router = useRouter();
 
@@ -14,7 +13,7 @@ export function GlobalSearch() {
       onSubmit={(e) => {
         e.preventDefault();
         const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value;
-        router.push(`/creators?q=${encodeURIComponent(q)}`);
+        router.push(`/search?q=${encodeURIComponent(q)}`);
       }}
       className="relative w-72"
     >
@@ -26,7 +25,7 @@ export function GlobalSearch() {
       <input
         type="search"
         name="q"
-        placeholder="Search creators…"
+        placeholder="Search campaigns, creators, content…"
         className="w-full rounded-sm border border-line bg-paper py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-ink-soft/50 focus:border-ink/40 focus:outline-none"
       />
     </form>

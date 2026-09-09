@@ -152,6 +152,51 @@ export default async function DashboardPage() {
           )}
         </section>
       </div>
+
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-ink-soft">Integration health</h2>
+          <Link href="/settings/integrations" className="text-xs text-ink-soft underline">
+            Manage integrations
+          </Link>
+        </div>
+        <div className="mb-4 grid grid-cols-3 gap-4">
+          <StatCard label="Metrics awaiting collection" value={String(data.metricsAwaitingCollection)} />
+          <StatCard label="Evidence missing" value={String(data.evidenceMissingCount)} />
+          <StatCard label="Sync errors" value={String(data.syncErrorsCount)} />
+        </div>
+        <ul className="card divide-y divide-line">
+          {data.integrationSummaries.map((summary) => (
+            <li key={summary.platform} className="flex items-center justify-between px-4 py-3 text-sm">
+              <span className="text-ink capitalize">{summary.platform}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-ink-soft">
+                  {summary.lastSyncAt ? `Last sync: ${formatDate(summary.lastSyncAt)}` : "Never synced"}
+                </span>
+                <span
+                  className={`badge ${
+                    summary.status === "connected"
+                      ? "border-status-success/30 text-status-success"
+                      : summary.status === "not_connected"
+                        ? "border-line text-ink-soft"
+                        : "border-status-warning/30 text-status-warning"
+                  }`}
+                >
+                  {summary.status === "connected"
+                    ? "Connected"
+                    : summary.status === "not_connected"
+                      ? "Not connected"
+                      : summary.status === "needs_reauth"
+                        ? "Needs attention"
+                        : summary.status === "error"
+                          ? "Error"
+                          : "Partially available"}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

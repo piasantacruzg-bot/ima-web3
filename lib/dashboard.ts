@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getIntegrationSummaries, type PlatformIntegrationSummary } from "@/lib/integrations-status";
+import { getAllExecutionRows, getTrackerItems } from "@/lib/execution";
 
 export interface DashboardData {
   activeCampaignsCount: number;
@@ -22,6 +24,10 @@ export interface DashboardData {
   }[];
   totalCreatorsCount: number;
   totalCampaignsCount: number;
+  integrationSummaries: PlatformIntegrationSummary[];
+  metricsAwaitingCollection: number;
+  evidenceMissingCount: number;
+  syncErrorsCount: number;
 }
 
 // All real queries against Supabase — no synthetic numbers. Every count
@@ -80,6 +86,13 @@ export async function getDashboardData(): Promise<DashboardData> {
     supabase.from("campaigns").select("id", { count: "exact", head: true }),
   ]);
 
+  const [integrationSummaries, executionRows] = await Promise.all([getIntegrationSummaries(), getAllExecutionRows()]);
+  const trackerItems = getTrackerItems(executionRows);
+  const isPublished = (status: string) => status === "published" || status === "metrics_collected";
+  const metricsAwaitingCollection = trackerItems.filter((i) => isPublished(i.status) && !i.hasMetrics).length;
+  const evidenceMissingCount = trackerItems.filter((i) => i.isStory && isPublished(i.status) && !i.hasEvidence).length;
+  const syncErrorsCount = integrationSummaries.reduce((sum, s) => sum + s.syncErrorCount, 0);
+
   return {
     activeCampaignsCount: activeCampaigns.count ?? 0,
     campaignsEndingSoon: campaignsEndingSoon.data ?? [],
@@ -109,5 +122,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     })),
     totalCreatorsCount: totalCreators.count ?? 0,
     totalCampaignsCount: totalCampaigns.count ?? 0,
+    integrationSummaries,
+    metricsAwaitingCollection,
+    evidenceMissingCount,
+    syncErrorsCount,
   };
 }

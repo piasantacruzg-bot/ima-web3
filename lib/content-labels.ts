@@ -1,5 +1,31 @@
-import type { DeliverableContentType, DeliverableStatus } from "@/types/database";
+import type { DeliverableContentType, DeliverableStatus, SocialPlatform } from "@/types/database";
 import type { CompletenessState } from "@/lib/execution/completeness";
+import type { IntegrationStatus } from "@/lib/integrations-status";
+
+export const PLATFORM_LABEL: Record<SocialPlatform, string> = {
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  x: "X",
+  youtube: "YouTube",
+  facebook: "Facebook",
+  other: "Other",
+};
+
+export const INTEGRATION_STATUS_LABEL: Record<IntegrationStatus, string> = {
+  not_connected: "Not connected",
+  connected: "Connected",
+  needs_reauth: "Needs reauthorization",
+  error: "Error",
+  partial: "Partially available",
+};
+
+export const INTEGRATION_STATUS_STYLE: Record<IntegrationStatus, string> = {
+  not_connected: "border-line text-ink-soft",
+  connected: "border-status-success/30 text-status-success",
+  needs_reauth: "border-status-warning/30 text-status-warning",
+  error: "border-status-danger/30 text-status-danger",
+  partial: "border-status-warning/30 text-status-warning",
+};
 
 export const CONTENT_TYPE_LABEL: Record<DeliverableContentType, string> = {
   instagram_reel: "Instagram Reel",

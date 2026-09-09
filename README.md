@@ -32,13 +32,18 @@ deterministic duplicate matching, safe merge, historical-data preservation,
 and rollback), Phase 4 (Campaign Management + Intelligent Creator
 Selection: campaign wizard, deterministic creator matching with explained
 scores, shortlist/select/reject workflow, budget tracking, and automatic
-deliverable assignment), and Phase 5 (Campaign Execution, Deliverables,
+deliverable assignment), Phase 5 (Campaign Execution, Deliverables,
 Content Tracker, Evidence & Metrics: per-Story-instance tracking, a content
 workflow state machine, manual metric entry with full history preservation,
 an evidence system, a Content Tracker UI, campaign dashboards/reports, and
-CSV/XLSX execution export) are complete. See `PHASE_1_SUMMARY.md`,
-`PHASE_2_SUMMARY.md`, `PHASE_3_SUMMARY.md`, `PHASE_4_SUMMARY.md`, and
-`PHASE_5_SUMMARY.md` for what's built and what's next.
+CSV/XLSX execution export), and Phase 6 (Integrations, Social APIs, Google
+Drive & Campaign Automation: a real OAuth-ready adapter per platform, a
+sync + content-matching engine, encrypted token storage, automation rules
+and notifications, campaign health scoring, and an Integration Center —
+see `API_INTEGRATIONS.md` for what's configured vs. what needs real
+credentials) are complete. See `PHASE_1_SUMMARY.md`, `PHASE_2_SUMMARY.md`,
+`PHASE_3_SUMMARY.md`, `PHASE_4_SUMMARY.md`, `PHASE_5_SUMMARY.md`, and
+`PHASE_6_SUMMARY.md` for what's built and what's next.
 
 ## Tests
 

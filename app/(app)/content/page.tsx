@@ -1,11 +1,17 @@
+import Link from "next/link";
 import { Link2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ContentTracker } from "@/components/content/content-tracker";
 import { getAllExecutionRows, getTrackerItems } from "@/lib/execution";
+import { getAmbiguousDiscoveredContent, getUnmatchedDiscoveredContent } from "@/lib/discovered-content";
 
 export default async function ContentTrackerPage() {
-  const rows = await getAllExecutionRows();
+  const [rows, ambiguous, unmatched] = await Promise.all([
+    getAllExecutionRows(),
+    getAmbiguousDiscoveredContent(),
+    getUnmatchedDiscoveredContent(),
+  ]);
   const items = getTrackerItems(rows);
 
   return (
@@ -15,6 +21,19 @@ export default async function ContentTrackerPage() {
         description={`${items.length} independently-trackable content item${items.length === 1 ? "" : "s"} across every campaign`}
         actions={
           <>
+            {ambiguous.length > 0 ? (
+              <Link href="/content/matches" className="btn-secondary">
+                Matches to review ({ambiguous.length})
+              </Link>
+            ) : null}
+            {unmatched.length > 0 ? (
+              <Link href="/content/import" className="btn-secondary">
+                Import ({unmatched.length})
+              </Link>
+            ) : null}
+            <Link href="/evidence" className="btn-secondary">
+              Evidence
+            </Link>
             <a href="/api/content/export?format=csv" className="btn-secondary">
               Export (CSV)
             </a>

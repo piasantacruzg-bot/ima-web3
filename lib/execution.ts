@@ -498,3 +498,76 @@ export function getTrackerItems(rows: DeliverableExecutionRow[]): TrackerItem[] 
 
   return items;
 }
+
+// --- Evidence review (/evidence) -------------------------------------
+
+export interface EvidenceReviewItem {
+  key: string;
+  campaignId: string;
+  campaignName: string;
+  creatorId: string;
+  creatorName: string;
+  deliverableId: string;
+  isStory: boolean;
+  sequenceNumber: number | null;
+  title: string | null;
+  contentType: DeliverableContentType;
+  evidence: ContentEvidence[];
+  hasEvidence: boolean;
+  hasDriveEvidence: boolean;
+  hasInternalEvidence: boolean;
+  thumbnailUrl: string | null;
+}
+
+function summarizeEvidence(evidence: ContentEvidence[]): Pick<EvidenceReviewItem, "hasDriveEvidence" | "hasInternalEvidence" | "thumbnailUrl"> {
+  return {
+    hasDriveEvidence: evidence.some((e) => e.evidence_type === "google_drive" || Boolean(e.drive_url)),
+    hasInternalEvidence: evidence.some((e) => Boolean(e.storage_path)),
+    thumbnailUrl: evidence.find((e) => e.screenshot_url)?.screenshot_url ?? null,
+  };
+}
+
+export function getEvidenceReviewItems(rows: DeliverableExecutionRow[]): EvidenceReviewItem[] {
+  const items: EvidenceReviewItem[] = [];
+
+  for (const row of rows) {
+    if (row.isStory && row.storyInstances.length > 0) {
+      for (const si of row.storyInstances) {
+        items.push({
+          key: `${row.deliverable.id}:${si.instance.sequence_number}`,
+          campaignId: row.campaign.id,
+          campaignName: row.campaign.campaign_name,
+          creatorId: row.creator.id,
+          creatorName: row.creator.display_name,
+          deliverableId: row.deliverable.id,
+          isStory: true,
+          sequenceNumber: si.instance.sequence_number,
+          title: row.deliverable.title,
+          contentType: row.deliverable.content_type,
+          evidence: si.evidence,
+          hasEvidence: si.evidence.length > 0,
+          ...summarizeEvidence(si.evidence),
+        });
+      }
+      continue;
+    }
+
+    items.push({
+      key: row.deliverable.id,
+      campaignId: row.campaign.id,
+      campaignName: row.campaign.campaign_name,
+      creatorId: row.creator.id,
+      creatorName: row.creator.display_name,
+      deliverableId: row.deliverable.id,
+      isStory: row.isStory,
+      sequenceNumber: null,
+      title: row.deliverable.title,
+      contentType: row.deliverable.content_type,
+      evidence: row.evidence,
+      hasEvidence: row.hasEvidence,
+      ...summarizeEvidence(row.evidence),
+    });
+  }
+
+  return items;
+}

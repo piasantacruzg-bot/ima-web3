@@ -398,6 +398,8 @@ export type ContentPost = {
   sync_status: SyncStatus;
   sync_error: string | null;
   last_synced_at: string | null;
+  content_status: ContentStatus;
+  unavailable_detected_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -487,6 +489,21 @@ export type ContentSubmission = {
 
 // Architecture-only (spec section 35) — a row here never triggers an email
 // or push notification on its own; that's future-phase wiring.
+// `type` stays free text (not an enum) matching audit_log.action's own
+// convention — the values below are the ones this app writes, not a
+// closed set enforced by the database.
+export type NotificationType =
+  | "deliverable_due"
+  | "deliverable_overdue"
+  | "content_submitted"
+  | "revision_requested"
+  | "content_approved"
+  | "content_published"
+  | "metrics_missing"
+  | "evidence_missing"
+  | "sync_failed"
+  | "connection_expired";
+
 export type Notification = {
   id: string;
   user_id: string;
@@ -495,8 +512,89 @@ export type Notification = {
   body: string | null;
   entity_type: string | null;
   entity_id: string | null;
+  campaign_id: string | null;
+  creator_id: string | null;
+  deliverable_id: string | null;
+  content_post_id: string | null;
   read_at: string | null;
   created_at: string;
+}
+
+export type ContentStatus = "active" | "unavailable";
+
+// Ciphertext only — lib/integrations/token-store.ts encrypts/decrypts
+// server-side; a plaintext token never reaches this table or the browser.
+export type IntegrationToken = {
+  id: string;
+  provider: string;
+  social_account_id: string | null;
+  access_token_encrypted: string | null;
+  refresh_token_encrypted: string | null;
+  expires_at: string | null;
+  scopes: string[];
+  connected_by: string | null;
+  connected_at: string;
+  last_refreshed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SyncStatusValue = "running" | "completed" | "partial" | "failed";
+
+export type IntegrationSyncLog = {
+  id: string;
+  provider: string;
+  social_account_id: string | null;
+  sync_type: string;
+  started_at: string;
+  completed_at: string | null;
+  status: SyncStatusValue;
+  records_found: number;
+  records_created: number;
+  records_updated: number;
+  records_skipped: number;
+  records_failed: number;
+  error_message: string | null;
+  created_at: string;
+}
+
+export type MatchStatus = "pending" | "confirmed" | "ignored";
+
+export interface DiscoveredContentCandidate {
+  deliverableId: string;
+  campaignId: string;
+  campaignName: string;
+  confidence: number;
+}
+
+// Holds a discovered post between a sync run and a human decision — an
+// ambiguous or unmatched match is never auto-assigned (spec section 14).
+export type DiscoveredContent = {
+  id: string;
+  provider: string;
+  platform: SocialPlatform;
+  platform_post_id: string;
+  post_url: string;
+  published_at: string | null;
+  social_account_id: string | null;
+  creator_id: string | null;
+  candidates: DiscoveredContentCandidate[];
+  match_status: MatchStatus;
+  resolved_deliverable_id: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+}
+
+export type AutomationRule = {
+  id: string;
+  rule_key: string;
+  name: string;
+  description: string | null;
+  is_enabled: boolean;
+  config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 export type StoryMetrics = {
@@ -677,6 +775,10 @@ export type Database = {
       content_evidence: TableDef<ContentEvidence>;
       content_submissions: TableDef<ContentSubmission>;
       notifications: TableDef<Notification>;
+      integration_tokens: TableDef<IntegrationToken>;
+      integration_sync_logs: TableDef<IntegrationSyncLog>;
+      automation_rules: TableDef<AutomationRule>;
+      discovered_content: TableDef<DiscoveredContent>;
       story_metrics: TableDef<StoryMetrics>;
       import_batches: TableDef<ImportBatch>;
       import_rows: TableDef<ImportRow>;

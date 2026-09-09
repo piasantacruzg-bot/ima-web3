@@ -16,7 +16,10 @@ import { DeliverablePerformanceTable } from "@/components/content/deliverable-pe
 import { CreatorPerformanceTable } from "@/components/content/creator-performance-table";
 import { ActivityFeed } from "@/components/content/activity-feed";
 import { getCampaignActivity } from "@/lib/activity";
-import { formatCompactNumber, formatCurrency, formatDate, formatMetric, formatMetricRate, formatPercent } from "@/lib/format";
+import { getCampaignAutomationSummary } from "@/lib/integrations-status";
+import { CampaignSyncButton } from "@/components/integrations/campaign-sync-button";
+import { PLATFORM_LABEL } from "@/lib/content-labels";
+import { formatCompactNumber, formatCurrency, formatDate, formatDateTime, formatMetric, formatMetricRate, formatPercent } from "@/lib/format";
 import type { CampaignStatus } from "@/types/database";
 
 const STATUS_STYLES: Record<CampaignStatus, string> = {
@@ -46,6 +49,7 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
   const creatorPerformance = getCreatorPerformanceRows(executionRows);
   const trackerItems = getTrackerItems(executionRows);
   const activity = await getCampaignActivity(id, executionRows);
+  const automation = await getCampaignAutomationSummary(id);
 
   return (
     <div>
@@ -179,6 +183,41 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
               <StatCard label="Engagements" value={formatMetric(performance.engagements)} />
               <StatCard label="Engagement rate" value={formatMetricRate(performance.engagement_rate)} />
             </div>
+          </section>
+
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-medium uppercase tracking-wide text-ink-soft">Automation</h2>
+              <CampaignSyncButton campaignId={id} />
+            </div>
+            <dl className="card grid grid-cols-2 gap-4 p-4 text-sm md:grid-cols-3">
+              <div>
+                <dt className="text-xs text-ink-soft">Connected platforms</dt>
+                <dd className="text-ink">
+                  {automation.connectedPlatforms.length > 0 ? automation.connectedPlatforms.map((p) => PLATFORM_LABEL[p]).join(", ") : "None"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-ink-soft">Last sync</dt>
+                <dd className="text-ink">{automation.lastSyncAt ? formatDateTime(automation.lastSyncAt) : "Never"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-ink-soft">Next sync</dt>
+                <dd className="text-ink">{automation.nextSyncAt ? formatDateTime(automation.nextSyncAt) : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-ink-soft">Content discovered</dt>
+                <dd className="text-ink">{automation.contentDiscovered}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-ink-soft">Metrics updated</dt>
+                <dd className="text-ink">{automation.metricsUpdated}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-ink-soft">Sync errors</dt>
+                <dd className={automation.syncErrors > 0 ? "text-status-danger" : "text-ink"}>{automation.syncErrors}</dd>
+              </div>
+            </dl>
           </section>
 
           <section>

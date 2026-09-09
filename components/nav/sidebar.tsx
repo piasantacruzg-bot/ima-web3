@@ -22,7 +22,7 @@ const NAV_ITEMS = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/imports", label: "Imports", icon: Upload },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/integrations", label: "Integrations", icon: Plug },
+  { href: "/settings/integrations", label: "Integrations", icon: Plug },
 ] as const;
 
 export function Sidebar() {
@@ -37,7 +37,7 @@ export function Sidebar() {
       </div>
       <ul className="flex flex-1 flex-col gap-0.5">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const isActive = href === "/" || href === "/settings" ? pathname === href : pathname.startsWith(href);
           return (
             <li key={href}>
               <Link

@@ -310,7 +310,7 @@ export async function publishStoryInstance(
 // passed in here. Google Drive fields are stored as given; no live Drive
 // authentication happens in this phase (spec section 15: "without
 // pretending that live Drive authentication exists" — see
-// lib/integrations/google-drive-adapter.ts).
+// lib/integrations/google-drive/adapter.ts).
 
 export interface AddEvidenceInput {
   deliverableId?: string;
@@ -481,4 +481,95 @@ export async function addMetricSnapshot(input: MetricSnapshotInput): Promise<{ e
   await logAudit(supabase, "metrics_added", "content_metrics", data.id, null, { source: input.source });
   revalidateExecutionPaths();
   return { metricId: data.id };
+}
+
+// --- Metric conflicts (spec sections 29-30) ---------------------------
+//
+// A conflict is never resolved by overwriting or deleting a snapshot —
+// every capture stays exactly as it was. "Resolving" one only records
+// which value the team currently trusts, via the audit log (reusing the
+// existing infrastructure rather than adding a dedicated table for a
+// decision that's really just an annotation on history everyone can
+// still see in full).
+
+export type MetricConflictResolution = "use_api" | "use_manual" | "keep_both" | "review_later";
+
+export async function resolveMetricConflict(
+  contentPostId: string,
+  field: string,
+  resolution: MetricConflictResolution,
+  apiSnapshotId: string,
+  manualSnapshotId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  await logAudit(supabase, "metric_conflict_resolved", "content_posts", contentPostId, null, {
+    field,
+    resolution,
+    api_snapshot_id: apiSnapshotId,
+    manual_snapshot_id: manualSnapshotId,
+  });
+  revalidateExecutionPaths();
+  return {};
+}
+
+// --- Discovered content review (spec sections 14/15/43) --------------
+//
+// Backs both /content/matches (a discovered post with plausible
+// candidates) and /content/import (one with none) — confirming always
+// creates the content_posts row explicitly, by a human decision; nothing
+// here auto-assigns.
+
+export async function confirmContentMatch(discoveredContentId: string, deliverableId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: discovered } = await supabase.from("discovered_content").select("*").eq("id", discoveredContentId).maybeSingle();
+  if (!discovered) return { error: "This discovered post no longer exists." };
+
+  const { data: deliverable } = await supabase.from("deliverables").select("*").eq("id", deliverableId).maybeSingle();
+  if (!deliverable) return { error: "Deliverable not found." };
+
+  const { data: created, error } = await supabase
+    .from("content_posts")
+    .insert({
+      campaign_id: deliverable.campaign_id,
+      creator_id: deliverable.creator_id,
+      deliverable_id: deliverableId,
+      social_account_id: discovered.social_account_id,
+      platform: discovered.platform,
+      content_type: deliverable.content_type,
+      post_url: discovered.post_url,
+      platform_post_id: discovered.platform_post_id,
+      published_at: discovered.published_at,
+      collection_method: "api",
+    })
+    .select("id")
+    .single();
+  if (error || !created) {
+    return { error: error?.code === "23505" ? "This URL or post id is already tracked." : "Could not create the content post." };
+  }
+
+  if (checkStatusTransition(deliverable.status, "published").valid) {
+    await supabase
+      .from("deliverables")
+      .update({ status: "published", published_at: discovered.published_at, published_url: discovered.post_url })
+      .eq("id", deliverableId);
+  }
+
+  await supabase
+    .from("discovered_content")
+    .update({ match_status: "confirmed", resolved_deliverable_id: deliverableId, resolved_at: new Date().toISOString() })
+    .eq("id", discoveredContentId);
+  await logAudit(supabase, "content_matched", "content_posts", created.id, null, { method: "manual_confirmation" });
+  revalidatePath("/content/matches");
+  revalidatePath("/content/import");
+  revalidateExecutionPaths(deliverable.campaign_id);
+  return {};
+}
+
+export async function ignoreDiscoveredContent(discoveredContentId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  await supabase.from("discovered_content").update({ match_status: "ignored", resolved_at: new Date().toISOString() }).eq("id", discoveredContentId);
+  await logAudit(supabase, "content_unlinked", "discovered_content", discoveredContentId, null, { decision: "ignored" });
+  revalidatePath("/content/matches");
+  revalidatePath("/content/import");
+  return {};
 }

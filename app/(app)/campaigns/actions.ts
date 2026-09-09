@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { campaignSchema, deliverableTemplateSchema } from "@/lib/validation/campaign";
 import { getCandidateCreators, getCreatorHistoryMap, creatorToMatchingInput } from "@/lib/campaigns";
 import { creatorMatchingService, type Eligibility, type MatchBreakdown } from "@/lib/campaigns/matching-service";
+import { syncCampaignContent } from "@/lib/sync";
 import type {
   Campaign,
   CampaignCreatorSelectionStatus,
@@ -491,4 +492,11 @@ export async function createCampaignAndRedirect(input: SaveCampaignInput) {
   const result = await saveCampaign(input);
   if ("error" in result) return result;
   redirect(`/campaigns/${result.campaignId}`);
+}
+
+export async function syncCampaignNow(campaignId: string) {
+  const outcomes = await syncCampaignContent(campaignId);
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaignId}/content`);
+  return outcomes;
 }

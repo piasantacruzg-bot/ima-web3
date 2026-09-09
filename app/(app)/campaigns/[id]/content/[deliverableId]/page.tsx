@@ -161,7 +161,40 @@ async function RegularDetail({
         <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">Metrics</h2>
         <MetricsPanel history={metricHistory} {...metricParent} />
       </section>
+
+      <section className="card p-5">
+        <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">API status</h2>
+        <ApiStatusBlock contentPost={execution.contentPost} latestMetric={metricHistory[metricHistory.length - 1] ?? null} />
+      </section>
     </>
+  );
+}
+
+function ApiStatusBlock({
+  contentPost,
+  latestMetric,
+}: {
+  contentPost: import("@/types/database").ContentPost | null;
+  latestMetric: ContentMetrics | null;
+}) {
+  const isApiSourced = latestMetric?.source === "api";
+  return (
+    <div className="grid grid-cols-3 gap-4 text-sm">
+      <div>
+        <p className="text-xs text-ink-soft">Metrics source</p>
+        <p className="text-ink capitalize">{latestMetric ? latestMetric.source : "No metrics yet"}</p>
+      </div>
+      <div>
+        <p className="text-xs text-ink-soft">Sync status</p>
+        <p className="text-ink capitalize">
+          {contentPost && isApiSourced ? contentPost.sync_status.replace(/_/g, " ") : "Manual"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-ink-soft">Last sync</p>
+        <p className="text-ink">{contentPost?.last_synced_at ? formatDate(contentPost.last_synced_at) : "Never"}</p>
+      </div>
+    </div>
   );
 }
 

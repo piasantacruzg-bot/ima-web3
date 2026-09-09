@@ -1,10 +1,10 @@
-// Architecture-only integration boundary (Phase 5 spec section 40+): defines
-// the shape a real social API integration would fill in during Phase 6.
-// No adapter here is allowed to fabricate numbers or scrape a platform's
-// HTML — every method either talks to a real, authorized API or reports
-// itself as unavailable so calling code falls back to manual entry
-// (lib/execution.ts / app/(app)/content/actions.ts already support that
-// fallback unconditionally).
+// Architecture-only integration boundary (Phase 5) filled in with real
+// provider structure in Phase 6: defines the shape every social platform
+// adapter implements. No adapter is allowed to fabricate numbers or
+// scrape a platform's HTML — every method either talks to a real,
+// authorized API or reports itself as unavailable/unconfigured so
+// calling code (lib/sync.ts, app/(app)/content/actions.ts) falls back to
+// manual entry unconditionally.
 
 import type { SocialPlatform } from "@/types/database";
 
@@ -41,32 +41,48 @@ export interface AdapterMetrics {
   saves: number | null;
 }
 
-export interface SyncMetricsResult {
-  postsSynced: number;
-  metricsInserted: number;
+export interface GetPostsOptions {
+  since?: string;
+  limit?: number;
 }
 
+export interface SyncResult {
+  recordsFound: number;
+  recordsCreated: number;
+  recordsUpdated: number;
+  recordsSkipped: number;
+  recordsFailed: number;
+}
+
+// One instance per connected social account (constructed with its id) —
+// matches how OAuth tokens and rate limits are scoped in every real
+// provider API.
 export interface SocialPlatformAdapter {
   readonly platform: SocialPlatform;
+  readonly socialAccountId: string;
   isConfigured(): boolean;
-  connect(socialAccountId: string): Promise<AdapterResult<{ oauthUrl: string }>>;
-  disconnect(socialAccountId: string): Promise<AdapterResult<void>>;
-  getAccount(socialAccountId: string): Promise<AdapterResult<AdapterAccountInfo>>;
-  getPosts(socialAccountId: string): Promise<AdapterResult<AdapterPost[]>>;
-  getPostMetrics(postUrl: string): Promise<AdapterResult<AdapterMetrics>>;
-  syncMetrics(socialAccountId: string): Promise<AdapterResult<SyncMetricsResult>>;
+  connect(): Promise<AdapterResult<{ oauthUrl: string }>>;
+  disconnect(): Promise<AdapterResult<void>>;
+  getAccount(): Promise<AdapterResult<AdapterAccountInfo>>;
+  getPosts(options?: GetPostsOptions): Promise<AdapterResult<AdapterPost[]>>;
+  getPost(platformPostId: string): Promise<AdapterResult<AdapterPost>>;
+  getPostMetrics(platformPostId: string): Promise<AdapterResult<AdapterMetrics>>;
+  syncPost(platformPostId: string): Promise<AdapterResult<SyncResult>>;
+  syncAccount(): Promise<AdapterResult<SyncResult>>;
 }
 
-const NOT_CONFIGURED_ERROR =
+export const NOT_CONFIGURED_ERROR =
   "No live API connection is configured for this platform yet. Enter data manually.";
 
-// The only implementation that exists today. It satisfies the full
-// interface but never returns fabricated data — every method reports
-// unavailability so the UI's manual-entry path (addEvidence /
-// addMetricSnapshot) remains the source of truth until a real adapter is
-// registered in getSocialPlatformAdapter below.
-class NotConfiguredAdapter implements SocialPlatformAdapter {
-  constructor(public readonly platform: SocialPlatform) {}
+// Base implementation every real (not-yet-credentialed) provider adapter
+// extends: satisfies the full interface but never returns fabricated
+// data — every method reports unavailability so the UI's manual-entry
+// path (addEvidence / addMetricSnapshot) remains the source of truth
+// until real OAuth credentials are configured for that provider.
+export abstract class NotConfiguredAdapter implements SocialPlatformAdapter {
+  abstract readonly platform: SocialPlatform;
+
+  constructor(public readonly socialAccountId: string) {}
 
   isConfigured(): boolean {
     return false;
@@ -84,23 +100,23 @@ class NotConfiguredAdapter implements SocialPlatformAdapter {
     return { ok: false, error: NOT_CONFIGURED_ERROR };
   }
 
-  async getPosts(): Promise<AdapterResult<AdapterPost[]>> {
+  async getPosts(_options?: GetPostsOptions): Promise<AdapterResult<AdapterPost[]>> {
     return { ok: false, error: NOT_CONFIGURED_ERROR };
   }
 
-  async getPostMetrics(): Promise<AdapterResult<AdapterMetrics>> {
+  async getPost(_platformPostId: string): Promise<AdapterResult<AdapterPost>> {
     return { ok: false, error: NOT_CONFIGURED_ERROR };
   }
 
-  async syncMetrics(): Promise<AdapterResult<SyncMetricsResult>> {
+  async getPostMetrics(_platformPostId: string): Promise<AdapterResult<AdapterMetrics>> {
     return { ok: false, error: NOT_CONFIGURED_ERROR };
   }
-}
 
-// Registry: Phase 6 registers real adapters (Instagram Graph API, TikTok
-// Display API, X API, etc.) here per platform. Until then every platform
-// resolves to the manual-fallback adapter above — deliberately, so nobody
-// mistakes "not yet built" for "returns zero".
-export function getSocialPlatformAdapter(platform: SocialPlatform): SocialPlatformAdapter {
-  return new NotConfiguredAdapter(platform);
+  async syncPost(_platformPostId: string): Promise<AdapterResult<SyncResult>> {
+    return { ok: false, error: NOT_CONFIGURED_ERROR };
+  }
+
+  async syncAccount(): Promise<AdapterResult<SyncResult>> {
+    return { ok: false, error: NOT_CONFIGURED_ERROR };
+  }
 }
