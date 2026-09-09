@@ -1,8 +1,14 @@
--- Phase 5: Campaign Execution, Deliverables, Content Tracker, Evidence &
--- Metrics. Extends Phase 1's deliverables/content_posts/content_metrics
--- (these ARE the brief's "campaign_actions"/"content posts"/"metric
--- snapshots" concepts, under their original names) rather than building a
--- parallel schema, and adds the structural pieces that didn't exist yet:
+-- Phase 5, step 2 of 2: Campaign Execution, Deliverables, Content
+-- Tracker, Evidence & Metrics. Run
+-- 20260912100000_execution_evidence_metrics_enum.sql FIRST, as its own
+-- separate execution — this file uses 'assigned' as a column default,
+-- which requires that enum value to already be committed (see that
+-- file's header comment for why).
+--
+-- Extends Phase 1's deliverables/content_posts/content_metrics (these ARE
+-- the brief's "campaign_actions"/"content posts"/"metric snapshots"
+-- concepts, under their original names) rather than building a parallel
+-- schema, and adds the structural pieces that didn't exist yet:
 -- per-Story instances, an evidence system, content-draft versioning, and a
 -- notification architecture (schema only, per the brief's own scoping).
 
@@ -10,22 +16,6 @@
 -- 1. Deliverables ("campaign_actions"): richer workflow + direct link to
 --    the campaign_creators relationship they belong to.
 -- ---------------------------------------------------------------------
-
--- The existing pipeline (not_started -> draft -> submitted -> needs_revision
--- -> approved -> scheduled -> published, with late/cancelled exits) already
--- covers most of the brief's section-17 workflow. Adding the stages it
--- doesn't yet have rather than renaming the ones it does (a deliverable's
--- very first stage becomes 'assigned', matching the brief's naming, and
--- 'in_review'/'metrics_collected' fill the two real gaps).
-alter type deliverable_status add value if not exists 'assigned';
-alter type deliverable_status add value if not exists 'brief';
-alter type deliverable_status add value if not exists 'in_review';
-alter type deliverable_status add value if not exists 'metrics_collected';
-
--- A new enum value can't be referenced (e.g. in a DEFAULT below) until the
--- transaction that added it has committed — Postgres error 55P04. This
--- commit closes that transaction; everything below runs in a fresh one.
-commit;
 
 alter table deliverables
   add column if not exists campaign_creator_id uuid references campaign_creators (id) on delete set null,
@@ -70,11 +60,12 @@ create table if not exists story_instances (
   unique (deliverable_id, sequence_number)
 );
 
+drop trigger if exists story_instances_set_updated_at on story_instances;
 create trigger story_instances_set_updated_at
   before update on story_instances
   for each row execute function set_updated_at();
 
-create index story_instances_deliverable_id_idx on story_instances (deliverable_id);
+create index if not exists story_instances_deliverable_id_idx on story_instances (deliverable_id);
 
 -- ---------------------------------------------------------------------
 -- 3. Content posts ("Content Post"): add the direct campaign_creator_id
@@ -152,9 +143,14 @@ order by coalesce(content_id::text, story_instance_id::text, deliverable_id::tex
 --    produced, independent of whether it has a public URL.
 -- ---------------------------------------------------------------------
 
-create type evidence_type as enum (
-  'public_url', 'screenshot', 'uploaded_file', 'google_drive', 'other'
-);
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'evidence_type') then
+    create type evidence_type as enum (
+      'public_url', 'screenshot', 'uploaded_file', 'google_drive', 'other'
+    );
+  end if;
+end $$;
 
 create table if not exists content_evidence (
   id uuid primary key default gen_random_uuid(),
@@ -178,9 +174,9 @@ create table if not exists content_evidence (
   )
 );
 
-create index content_evidence_deliverable_id_idx on content_evidence (deliverable_id);
-create index content_evidence_content_post_id_idx on content_evidence (content_post_id);
-create index content_evidence_story_instance_id_idx on content_evidence (story_instance_id);
+create index if not exists content_evidence_deliverable_id_idx on content_evidence (deliverable_id);
+create index if not exists content_evidence_content_post_id_idx on content_evidence (content_post_id);
+create index if not exists content_evidence_story_instance_id_idx on content_evidence (story_instance_id);
 
 -- ---------------------------------------------------------------------
 -- 6. Content submissions — draft/revision versioning (spec section 19).
@@ -188,9 +184,14 @@ create index content_evidence_story_instance_id_idx on content_evidence (story_i
 --    destroyed, so the review history stays intact.
 -- ---------------------------------------------------------------------
 
-create type submission_approval_status as enum (
-  'pending', 'approved', 'revision_requested', 'rejected'
-);
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'submission_approval_status') then
+    create type submission_approval_status as enum (
+      'pending', 'approved', 'revision_requested', 'rejected'
+    );
+  end if;
+end $$;
 
 create table if not exists content_submissions (
   id uuid primary key default gen_random_uuid(),
@@ -211,7 +212,7 @@ create table if not exists content_submissions (
   unique (deliverable_id, version_number)
 );
 
-create index content_submissions_deliverable_id_idx on content_submissions (deliverable_id);
+create index if not exists content_submissions_deliverable_id_idx on content_submissions (deliverable_id);
 
 -- ---------------------------------------------------------------------
 -- 7. Notifications — architecture only (spec section 35: no delivery
@@ -232,8 +233,8 @@ create table if not exists notifications (
   created_at timestamptz not null default now()
 );
 
-create index notifications_user_id_idx on notifications (user_id, created_at desc);
-create index notifications_unread_idx on notifications (user_id) where read_at is null;
+create index if not exists notifications_user_id_idx on notifications (user_id, created_at desc);
+create index if not exists notifications_unread_idx on notifications (user_id) where read_at is null;
 
 -- ---------------------------------------------------------------------
 -- 8. Backfill: migrate existing story_metrics rows (Phase 1's flat,
@@ -289,43 +290,62 @@ alter table content_evidence enable row level security;
 alter table content_submissions enable row level security;
 alter table notifications enable row level security;
 
+drop policy if exists story_instances_select_staff on story_instances;
 create policy story_instances_select_staff on story_instances for select using (is_staff());
+drop policy if exists story_instances_write_staff on story_instances;
 create policy story_instances_write_staff on story_instances
   for insert with check (is_staff());
+drop policy if exists story_instances_update_staff on story_instances;
 create policy story_instances_update_staff on story_instances
   for update using (is_staff()) with check (is_staff());
+drop policy if exists story_instances_delete_admin on story_instances;
 create policy story_instances_delete_admin on story_instances
   for delete using (is_admin());
 
+drop policy if exists content_evidence_select_staff on content_evidence;
 create policy content_evidence_select_staff on content_evidence for select using (is_staff());
+drop policy if exists content_evidence_write_staff on content_evidence;
 create policy content_evidence_write_staff on content_evidence
   for insert with check (is_staff());
+drop policy if exists content_evidence_update_staff on content_evidence;
 create policy content_evidence_update_staff on content_evidence
   for update using (is_staff()) with check (is_staff());
+drop policy if exists content_evidence_delete_admin on content_evidence;
 create policy content_evidence_delete_admin on content_evidence
   for delete using (is_admin());
 
+drop policy if exists content_submissions_select_staff on content_submissions;
 create policy content_submissions_select_staff on content_submissions for select using (is_staff());
+drop policy if exists content_submissions_write_staff on content_submissions;
 create policy content_submissions_write_staff on content_submissions
   for insert with check (is_staff());
+drop policy if exists content_submissions_update_staff on content_submissions;
 create policy content_submissions_update_staff on content_submissions
   for update using (is_staff()) with check (is_staff());
+drop policy if exists content_submissions_delete_admin on content_submissions;
 create policy content_submissions_delete_admin on content_submissions
   for delete using (is_admin());
 
 -- Notifications are private to the user they belong to, regardless of role.
+drop policy if exists notifications_select_own on notifications;
 create policy notifications_select_own on notifications
   for select using (user_id = auth.uid());
+drop policy if exists notifications_update_own on notifications;
 create policy notifications_update_own on notifications
   for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists notifications_insert_staff on notifications;
 create policy notifications_insert_staff on notifications
   for insert with check (is_staff());
+drop policy if exists notifications_delete_own on notifications;
 create policy notifications_delete_own on notifications
   for delete using (user_id = auth.uid());
 
+drop policy if exists storage_content_evidence_select on storage.objects;
 create policy storage_content_evidence_select on storage.objects
   for select using (bucket_id = 'content-evidence' and is_staff());
+drop policy if exists storage_content_evidence_write on storage.objects;
 create policy storage_content_evidence_write on storage.objects
   for insert with check (bucket_id = 'content-evidence' and is_staff());
+drop policy if exists storage_content_evidence_delete on storage.objects;
 create policy storage_content_evidence_delete on storage.objects
   for delete using (bucket_id = 'content-evidence' and is_admin());
