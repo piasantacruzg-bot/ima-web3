@@ -22,6 +22,11 @@ alter type deliverable_status add value if not exists 'brief';
 alter type deliverable_status add value if not exists 'in_review';
 alter type deliverable_status add value if not exists 'metrics_collected';
 
+-- A new enum value can't be referenced (e.g. in a DEFAULT below) until the
+-- transaction that added it has committed — Postgres error 55P04. This
+-- commit closes that transaction; everything below runs in a fresh one.
+commit;
+
 alter table deliverables
   add column if not exists campaign_creator_id uuid references campaign_creators (id) on delete set null,
   add column if not exists title text,
