@@ -66,9 +66,18 @@ export type DeliverableStatus =
   | "scheduled"
   | "published"
   | "late"
-  | "cancelled";
+  | "cancelled"
+  | "assigned"
+  | "brief"
+  | "in_review"
+  | "metrics_collected";
 export type CollectionMethod = "api" | "url_import" | "manual" | "screenshot";
 export type MetricSource = "api" | "manual" | "screenshot" | "imported" | "url";
+export type EvidenceType = "public_url" | "screenshot" | "uploaded_file" | "google_drive" | "other";
+export type SubmissionApprovalStatus = "pending" | "approved" | "revision_requested" | "rejected";
+// Which denominator produced an engagement_rate snapshot — never mixed
+// silently across snapshots (spec section 13).
+export type EngagementRateMethod = "reach" | "impressions" | "followers";
 export type ImportFileType = "csv" | "xlsx";
 export type ImportBatchStatus =
   | "uploaded"
@@ -333,17 +342,39 @@ export type Deliverable = {
   id: string;
   campaign_id: string;
   creator_id: string;
+  campaign_creator_id: string | null;
   template_id: string | null;
   platform: SocialPlatform;
   content_type: DeliverableContentType;
+  title: string | null;
+  description: string | null;
   quantity: number;
   due_date: string | null;
   status: DeliverableStatus;
   instructions: string | null;
   caption_required: boolean;
   approval_required: boolean;
+  usage_rights: string | null;
+  paid_media_rights: boolean;
+  exclusivity: string | null;
   published_url: string | null;
   published_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// One Story deliverable with quantity 3 becomes three of these — each
+// independently trackable (own status, evidence, metrics), never a shared
+// record (spec sections 6-7).
+export type StoryInstance = {
+  id: string;
+  deliverable_id: string;
+  sequence_number: number;
+  status: DeliverableStatus;
+  published_at: string | null;
+  content_url: string | null;
+  caption: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -353,6 +384,7 @@ export type ContentPost = {
   id: string;
   campaign_id: string;
   creator_id: string;
+  campaign_creator_id: string | null;
   deliverable_id: string | null;
   social_account_id: string | null;
   platform: SocialPlatform;
@@ -370,9 +402,14 @@ export type ContentPost = {
   updated_at: string;
 }
 
+// Belongs to exactly one of content_id / story_instance_id / deliverable_id
+// — the most granular relationship available (spec section 9). A snapshot
+// is never overwritten; every capture is a new row (captured_at).
 export type ContentMetrics = {
   id: string;
-  content_id: string;
+  content_id: string | null;
+  story_instance_id: string | null;
+  deliverable_id: string | null;
   captured_at: string;
   source: MetricSource;
   views: number | null;
@@ -381,17 +418,84 @@ export type ContentMetrics = {
   likes: number | null;
   comments: number | null;
   shares: number | null;
+  reposts: number | null;
   saves: number | null;
   clicks: number | null;
   replies: number | null;
   engagements: number | null;
   engagement_rate: number | null;
+  engagement_rate_method: EngagementRateMethod | null;
   watch_time: number | null;
+  average_watch_time: number | null;
   completion_rate: number | null;
   link_clicks: number | null;
+  website_clicks: number | null;
+  cta_clicks: number | null;
   sticker_taps: number | null;
+  forward_taps: number | null;
+  back_taps: number | null;
+  exits: number | null;
+  video_starts: number | null;
+  three_second_views: number | null;
   other_metrics: Record<string, unknown>;
+  is_estimated: boolean;
   captured_by: string | null;
+  created_at: string;
+}
+
+// Proof a deliverable/content/Story was actually produced — independent of
+// whether it has a public URL (spec section 14/29: a Story is never
+// "incomplete" merely for lacking one).
+export type ContentEvidence = {
+  id: string;
+  deliverable_id: string | null;
+  content_post_id: string | null;
+  story_instance_id: string | null;
+  evidence_type: EvidenceType;
+  file_url: string | null;
+  storage_path: string | null;
+  screenshot_url: string | null;
+  drive_file_id: string | null;
+  drive_folder_id: string | null;
+  drive_url: string | null;
+  filename: string | null;
+  captured_at: string | null;
+  uploaded_at: string;
+  uploaded_by: string | null;
+  notes: string | null;
+}
+
+// Draft/revision versioning (spec section 19) — never destroyed, so the
+// review history stays intact.
+export type ContentSubmission = {
+  id: string;
+  deliverable_id: string;
+  story_instance_id: string | null;
+  version_number: number;
+  file_url: string | null;
+  storage_path: string | null;
+  content_url: string | null;
+  caption: string | null;
+  thumbnail_url: string | null;
+  notes: string | null;
+  approval_status: SubmissionApprovalStatus;
+  submitted_at: string;
+  submitted_by: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+// Architecture-only (spec section 35) — a row here never triggers an email
+// or push notification on its own; that's future-phase wiring.
+export type Notification = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  read_at: string | null;
   created_at: string;
 }
 
@@ -567,8 +671,12 @@ export type Database = {
       campaign_deliverable_templates: TableDef<CampaignDeliverableTemplate>;
       campaign_templates: TableDef<CampaignTemplate>;
       deliverables: TableDef<Deliverable>;
+      story_instances: TableDef<StoryInstance>;
       content_posts: TableDef<ContentPost>;
       content_metrics: TableDef<ContentMetrics>;
+      content_evidence: TableDef<ContentEvidence>;
+      content_submissions: TableDef<ContentSubmission>;
+      notifications: TableDef<Notification>;
       story_metrics: TableDef<StoryMetrics>;
       import_batches: TableDef<ImportBatch>;
       import_rows: TableDef<ImportRow>;
@@ -582,6 +690,7 @@ export type Database = {
     };
     Views: {
       creators_with_stats: { Row: CreatorWithStats; Relationships: [] };
+      content_metrics_latest: { Row: ContentMetrics; Relationships: [] };
     };
     Functions: { [_ in never]: never };
     Enums: {

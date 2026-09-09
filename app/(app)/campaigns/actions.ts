@@ -322,29 +322,49 @@ export async function shortlistCampaignCreator(campaignId: string, creatorId: st
 // template already assigned to this creator so re-selecting is a no-op
 // rather than creating duplicates.
 async function assignDeliverablesFromTemplates(supabase: Supabase, campaignId: string, creatorId: string) {
-  const [{ data: templates }, { data: existingDeliverables }] = await Promise.all([
+  const [{ data: templates }, { data: existingDeliverables }, { data: campaignCreator }] = await Promise.all([
     supabase.from("campaign_deliverable_templates").select("*").eq("campaign_id", campaignId),
     supabase.from("deliverables").select("template_id").eq("campaign_id", campaignId).eq("creator_id", creatorId),
+    supabase.from("campaign_creators").select("id").eq("campaign_id", campaignId).eq("creator_id", creatorId).maybeSingle(),
   ]);
 
   const alreadyAssigned = new Set((existingDeliverables ?? []).map((d) => d.template_id).filter(Boolean));
   const toCreate = (templates ?? []).filter((t) => !alreadyAssigned.has(t.id));
   if (toCreate.length === 0) return;
 
-  await supabase.from("deliverables").insert(
-    toCreate.map((t) => ({
-      campaign_id: campaignId,
-      creator_id: creatorId,
-      template_id: t.id,
-      platform: t.platform,
-      content_type: t.content_type,
-      quantity: t.quantity,
-      due_date: t.default_due_date,
-      instructions: t.instructions,
-      approval_required: t.approval_required,
-      notes: t.notes,
-    }))
-  );
+  const { data: created } = await supabase
+    .from("deliverables")
+    .insert(
+      toCreate.map((t) => ({
+        campaign_id: campaignId,
+        creator_id: creatorId,
+        campaign_creator_id: campaignCreator?.id ?? null,
+        template_id: t.id,
+        platform: t.platform,
+        content_type: t.content_type,
+        quantity: t.quantity,
+        due_date: t.default_due_date,
+        instructions: t.instructions,
+        usage_rights: t.usage_rights,
+        paid_media_rights: t.paid_media_rights,
+        exclusivity: t.exclusivity_requirements,
+        approval_required: t.approval_required,
+        notes: t.notes,
+      }))
+    )
+    .select("id, content_type, quantity");
+
+  // A Story deliverable with quantity > 1 becomes that many independently
+  // trackable story_instances up front — never one shared record (spec
+  // sections 6-7).
+  const storyInstanceRows = (created ?? [])
+    .filter((d) => d.content_type === "instagram_story")
+    .flatMap((d) =>
+      Array.from({ length: d.quantity }, (_, i) => ({ deliverable_id: d.id, sequence_number: i + 1 }))
+    );
+  if (storyInstanceRows.length > 0) {
+    await supabase.from("story_instances").insert(storyInstanceRows);
+  }
 }
 
 export async function selectCampaignCreator(campaignId: string, creatorId: string, match?: MatchInfo) {

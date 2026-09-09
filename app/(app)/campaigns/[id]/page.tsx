@@ -1,11 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Users, Package, DollarSign, Archive, RotateCcw, Pencil } from "lucide-react";
+import { Users, Package, DollarSign, Archive, RotateCcw, Pencil, Link2, FileBarChart } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { getCampaignDetail, getCampaignDeliverables } from "@/lib/campaigns";
 import { archiveCampaign, restoreCampaign } from "@/app/(app)/campaigns/actions";
-import { formatCompactNumber, formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import {
+  getCampaignExecutionRows,
+  getCampaignAggregateMetrics,
+  getCampaignReadiness,
+  getCreatorPerformanceRows,
+  getTrackerItems,
+} from "@/lib/execution";
+import { DeliverablePerformanceTable } from "@/components/content/deliverable-performance-table";
+import { CreatorPerformanceTable } from "@/components/content/creator-performance-table";
+import { ActivityFeed } from "@/components/content/activity-feed";
+import { getCampaignActivity } from "@/lib/activity";
+import { formatCompactNumber, formatCurrency, formatDate, formatMetric, formatMetricRate, formatPercent } from "@/lib/format";
 import type { CampaignStatus } from "@/types/database";
 
 const STATUS_STYLES: Record<CampaignStatus, string> = {
@@ -28,6 +39,13 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
   const upcomingDeliverables = deliverables.filter((d) => d.due_date).slice(0, 5);
   const boundArchive = archiveCampaign.bind(null, id);
   const boundRestore = restoreCampaign.bind(null, id);
+
+  const executionRows = await getCampaignExecutionRows(id);
+  const performance = getCampaignAggregateMetrics(executionRows);
+  const readiness = getCampaignReadiness(executionRows);
+  const creatorPerformance = getCreatorPerformanceRows(executionRows);
+  const trackerItems = getTrackerItems(executionRows);
+  const activity = await getCampaignActivity(id, executionRows);
 
   return (
     <div>
@@ -52,6 +70,14 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
             <Link href={`/campaigns/${id}/creators`} className="btn-secondary">
               <Users size={15} strokeWidth={1.75} />
               Creators
+            </Link>
+            <Link href={`/campaigns/${id}/content`} className="btn-secondary">
+              <Link2 size={15} strokeWidth={1.75} />
+              Content
+            </Link>
+            <Link href={`/campaigns/${id}/report`} className="btn-secondary">
+              <FileBarChart size={15} strokeWidth={1.75} />
+              Report
             </Link>
             <Link href={`/campaigns/${id}/edit`} className="btn-secondary">
               <Pencil size={15} strokeWidth={1.75} />
@@ -118,9 +144,41 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
               <StatCard label="Est. avg. views" value={formatCompactNumber(estimated.averageViews)} />
             </div>
             <p className="mt-2 text-xs text-ink-soft">
-              Actual campaign performance (real posted content metrics) is not available yet — it lands in a later
-              phase once content tracking is built.
+              Actual performance from tracked content appears below, once creators start publishing.
             </p>
+          </section>
+
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-medium uppercase tracking-wide text-ink-soft">
+                Execution readiness <span className="normal-case text-ink-soft/70">({readiness.readinessPercent}% ready)</span>
+              </h2>
+              <Link href={`/campaigns/${id}/content`} className="text-xs text-ink-soft underline">
+                View content tracker
+              </Link>
+            </div>
+            {readiness.blockers.length === 0 ? (
+              <p className="text-sm text-status-success">Nothing blocking this report.</p>
+            ) : (
+              <ul className="card divide-y divide-line text-sm">
+                {readiness.blockers.map((b) => (
+                  <li key={b} className="px-4 py-2 text-ink-soft">
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">
+              Performance <span className="normal-case text-ink-soft/70">(computed from every tracked deliverable)</span>
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
+              <StatCard label="Views" value={formatMetric(performance.views)} />
+              <StatCard label="Engagements" value={formatMetric(performance.engagements)} />
+              <StatCard label="Engagement rate" value={formatMetricRate(performance.engagement_rate)} />
+            </div>
           </section>
 
           <section>
@@ -202,8 +260,29 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
               </p>
             ))}
           </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">Recent activity</h2>
+            <ActivityFeed entries={activity} />
+          </section>
         </div>
       </div>
+
+      {executionRows.length > 0 ? (
+        <div className="mt-6 space-y-6">
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">Creator performance</h2>
+            <CreatorPerformanceTable rows={creatorPerformance} />
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-soft">
+              Deliverable performance <span className="normal-case text-ink-soft/70">({trackerItems.length} tracked individually)</span>
+            </h2>
+            <DeliverablePerformanceTable items={trackerItems} />
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

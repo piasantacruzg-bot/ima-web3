@@ -330,3 +330,131 @@ insert into campaign_templates (
     null
   )
 on conflict (id) do nothing;
+
+-- ============================================================
+-- PHASE 5: "Luxury Miami Launch" acceptance scenario (spec section 50) —
+-- 10 selected creators, and for ONE of them (Valentina Cruz) exactly 7
+-- independently-trackable content items: 1 Instagram Reel, 3 Instagram
+-- Stories (as 3 separate story_instances under one Story deliverable),
+-- 1 TikTok, and 2 X Posts (as two separate deliverable rows, since only
+-- Stories get per-instance splitting in this schema). Every item below
+-- carries distinct metric values on purpose, so the aggregation math is
+-- verifiable by inspection rather than by coincidence.
+-- ============================================================
+insert into campaigns (
+  id, campaign_name, client_name, brand_name, description, market, country,
+  city, campaign_type, start_date, end_date, budget, status,
+  campaign_objectives, target_audience, target_categories, target_platforms,
+  creator_requirements, is_demo
+) values
+  ('22222222-2222-2222-2222-222222222206', 'Luxury Miami Launch', 'Meridian Yachts', 'Meridian', 'Launch campaign for the new Meridian 58 yacht line, Miami-focused.', 'Miami', 'USA', 'Miami', 'Product Launch', current_date - interval '15 days', current_date + interval '15 days', 60000, 'active', 'Build premium awareness for the Meridian 58 launch among affluent Miami audiences.', '{"age_range":"28-55","gender":"all","locations":["Miami"],"interests":["luxury","yachting","lifestyle"],"languages":["English","Spanish"]}', '{Lifestyle,Luxury,Travel}', '{instagram,tiktok,x}', '{"min_followers":30000,"min_engagement":3,"creator_types":["micro","mid","macro"],"budget_per_creator":3000,"creator_count":10}', true)
+on conflict (id) do nothing;
+
+insert into campaign_creators (
+  id, campaign_id, creator_id, status, selection_status, negotiated_fee,
+  approved_fee, payment_status, contract_status, briefing_status,
+  match_score, match_reasons
+) values
+  ('66666666-6666-6666-6666-666666666611', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111101', 'active', 'selected', 2200, 2200, 'paid', 'signed', 'complete', 90, '{"Miami based","Lifestyle & fashion niche"}'),
+  ('66666666-6666-6666-6666-666666666612', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111102', 'active', 'selected', 1800, 1800, 'paid', 'signed', 'complete', 78, '{"Miami based"}'),
+  ('66666666-6666-6666-6666-666666666613', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111103', 'active', 'selected', 6000, 6000, 'invoiced', 'signed', 'complete', 84, '{"Strong content quality"}'),
+  ('66666666-6666-6666-6666-666666666614', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111104', 'active', 'selected', 2400, 2400, 'unpaid', 'signed', 'in_progress', 76, '{"Tech-adjacent audience"}'),
+  ('66666666-6666-6666-6666-666666666615', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111105', 'active', 'selected', 3200, 3200, 'paid', 'signed', 'complete', 92, '{"Luxury travel niche match","Miami based"}'),
+  ('66666666-6666-6666-6666-666666666616', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111107', 'active', 'selected', 1200, 1200, 'unpaid', 'signed', 'in_progress', 70, '{"Miami based"}'),
+  ('66666666-6666-6666-6666-666666666617', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', 'active', 'selected', 5000, 5000, 'partial', 'signed', 'complete', 95, '{"Miami based","Top lifestyle voice","Strong Reel performance"}'),
+  ('66666666-6666-6666-6666-666666666618', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111113', 'active', 'selected', 4400, 4400, 'unpaid', 'signed', 'complete', 80, '{"Editorial fashion fit"}'),
+  ('66666666-6666-6666-6666-666666666619', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111119', 'active', 'selected', 2000, 2000, 'unpaid', 'sent', 'not_sent', 73, '{"Wellness niche"}'),
+  ('66666666-6666-6666-6666-666666666620', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111127', 'active', 'selected', 7000, 7000, 'unpaid', 'signed', 'complete', 93, '{"Luxury lifestyle niche match","Miami based","High-end fashion audience"}')
+on conflict (id) do nothing;
+
+-- Deliverables for Valentina Cruz (creator ...109): 1 Reel, 1 Story
+-- deliverable (quantity 3 -> 3 story_instances below), 1 TikTok, and 2
+-- separate X Post deliverables — 7 independently-trackable items total.
+insert into deliverables (
+  id, campaign_id, creator_id, campaign_creator_id, platform, content_type,
+  title, quantity, due_date, status, instructions, caption_required,
+  approval_required, usage_rights, paid_media_rights, published_url,
+  published_at
+) values
+  ('44444444-4444-4444-4444-444444444412', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', 'instagram', 'instagram_reel', 'Meridian 58 sunset cruise Reel', 1, current_date - interval '6 days', 'published', 'Feature the Meridian 58 on a sunset cruise.', true, true, '6-month organic + paid usage rights', true, 'https://instagram.com/reel/meridian-valentina-001', now() - interval '6 days'),
+  ('44444444-4444-4444-4444-444444444413', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', 'instagram', 'instagram_story', 'Meridian 58 onboard Story series', 3, current_date - interval '5 days', 'published', 'Three-part Story series touring the yacht.', false, false, '3-month organic usage rights', false, null, null),
+  ('44444444-4444-4444-4444-444444444414', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', 'tiktok', 'tiktok', 'Meridian 58 GRWM for a yacht day', 1, current_date - interval '4 days', 'published', 'GRWM for a day on the Meridian 58.', true, true, '6-month organic usage rights', true, 'https://tiktok.com/@valentinacruz/video/meridian-001', now() - interval '4 days'),
+  ('44444444-4444-4444-4444-444444444415', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', 'x', 'x_post', 'Meridian 58 launch — X Post #1', 1, current_date - interval '3 days', 'published', 'Announce the partnership on X.', false, false, '3-month organic usage rights', false, 'https://x.com/valentinacruz/status/meridian-001', now() - interval '3 days'),
+  ('44444444-4444-4444-4444-444444444416', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', 'x', 'x_post', 'Meridian 58 launch — X Post #2', 1, current_date - interval '1 days', 'published', 'Follow-up X Post with cruise photos.', false, false, '3-month organic usage rights', false, 'https://x.com/valentinacruz/status/meridian-002', now() - interval '1 days')
+on conflict (id) do nothing;
+
+insert into story_instances (
+  id, deliverable_id, sequence_number, status, published_at, content_url, caption
+) values
+  ('99999999-9999-4999-8999-000000000001', '44444444-4444-4444-4444-444444444413', 1, 'published', now() - interval '5 days', null, 'Boarding the Meridian 58'),
+  ('99999999-9999-4999-8999-000000000002', '44444444-4444-4444-4444-444444444413', 2, 'published', now() - interval '5 days', null, 'Sunset on the top deck'),
+  ('99999999-9999-4999-8999-000000000003', '44444444-4444-4444-4444-444444444413', 3, 'published', now() - interval '5 days', null, 'Cabin tour')
+on conflict (id) do nothing;
+
+-- No story ever has a public URL here on purpose — proving a Story is
+-- never "incomplete" for lacking one, as long as it has evidence +
+-- metrics (spec section 29). A screenshot is on file for each instead.
+insert into content_evidence (
+  id, story_instance_id, evidence_type, notes
+) values
+  ('99999999-9999-4999-8999-000000000011', '99999999-9999-4999-8999-000000000001', 'screenshot', 'Demo screenshot on file for Story #1 (placeholder — real upload pending).'),
+  ('99999999-9999-4999-8999-000000000012', '99999999-9999-4999-8999-000000000002', 'screenshot', 'Demo screenshot on file for Story #2 (placeholder — real upload pending).'),
+  ('99999999-9999-4999-8999-000000000013', '99999999-9999-4999-8999-000000000003', 'screenshot', 'Demo screenshot on file for Story #3 (placeholder — real upload pending).')
+on conflict (id) do nothing;
+
+insert into content_posts (
+  id, campaign_id, creator_id, campaign_creator_id, deliverable_id,
+  social_account_id, platform, content_type, post_url, caption,
+  published_at, collection_method, sync_status
+) values
+  ('55555555-5555-5555-5555-555555555508', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', '44444444-4444-4444-4444-444444444412', '33333333-3333-3333-3333-333333333316', 'instagram', 'instagram_reel', 'https://instagram.com/reel/meridian-valentina-001', 'Golden hour on the Meridian 58 🛥️ #ad @meridianyachts', now() - interval '6 days', 'manual', 'never_synced'),
+  ('55555555-5555-5555-5555-555555555509', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', '44444444-4444-4444-4444-444444444414', '33333333-3333-3333-3333-333333333317', 'tiktok', 'tiktok', 'https://tiktok.com/@valentinacruz/video/meridian-001', 'GRWM for a yacht day ft. @meridianyachts #ad', now() - interval '4 days', 'manual', 'never_synced'),
+  ('55555555-5555-5555-5555-555555555510', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', '44444444-4444-4444-4444-444444444415', null, 'x', 'x_post', 'https://x.com/valentinacruz/status/meridian-001', 'So proud to partner with @meridianyachts on the 58 launch #ad', now() - interval '3 days', 'manual', 'never_synced'),
+  ('55555555-5555-5555-5555-555555555511', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111109', '66666666-6666-6666-6666-666666666617', '44444444-4444-4444-4444-444444444416', null, 'x', 'x_post', 'https://x.com/valentinacruz/status/meridian-002', 'More from the Meridian 58 launch cruise 📸', now() - interval '1 days', 'manual', 'never_synced')
+on conflict (id) do nothing;
+
+-- Evidence for the Reel and TikTok (both X Posts deliberately have none
+-- yet, so the report's Evidence Completeness section has a real, named
+-- gap to show rather than a false 100%).
+insert into content_evidence (
+  id, content_post_id, evidence_type, file_url, notes
+) values
+  ('99999999-9999-4999-8999-000000000014', '55555555-5555-5555-5555-555555555508', 'public_url', 'https://instagram.com/reel/meridian-valentina-001', 'Public post is itself the evidence.'),
+  ('99999999-9999-4999-8999-000000000015', '55555555-5555-5555-5555-555555555509', 'public_url', 'https://tiktok.com/@valentinacruz/video/meridian-001', 'Public post is itself the evidence.')
+on conflict (id) do nothing;
+
+-- Metrics: every item below has distinct values, and the Reel gets a
+-- second, later snapshot to prove a new capture is additive (a new row
+-- keyed by captured_at) rather than an overwrite of the first.
+insert into content_metrics (
+  content_id, story_instance_id, deliverable_id, captured_at, source,
+  views, reach, impressions, likes, comments, shares, reposts, saves,
+  replies, sticker_taps, exits, engagements, engagement_rate,
+  engagement_rate_method
+) values
+  -- Reel: first capture, then a later, higher second capture.
+  ('55555555-5555-5555-5555-555555555508', null, null, now() - interval '5 days', 'manual', 95000, 78000, 110000, 6100, 260, 480, null, 710, null, null, null, 7550, 9.68, 'reach'),
+  ('55555555-5555-5555-5555-555555555508', null, null, now() - interval '2 days', 'manual', 125000, 98000, 140000, 8200, 340, 610, null, 920, null, null, null, 10070, 10.28, 'reach'),
+  -- TikTok.
+  ('55555555-5555-5555-5555-555555555509', null, null, now() - interval '3 days', 'manual', 340000, 210000, 380000, 41000, 890, 3200, null, 2100, null, null, null, 47190, 22.47, 'reach'),
+  -- X Post #1 and #2 — impressions-based rate (X doesn't expose reach).
+  ('55555555-5555-5555-5555-555555555510', null, null, now() - interval '2 days', 'manual', null, null, 52000, 1200, 180, null, 310, null, null, null, null, 1690, 3.25, 'impressions'),
+  ('55555555-5555-5555-5555-555555555511', null, null, now() - interval '18 hours', 'manual', null, null, 61000, 1450, 110, null, 380, null, null, null, null, 1940, 3.18, 'impressions'),
+  -- Story #1, #2, #3 — each with distinct, non-overlapping values. No
+  -- likes/comments/shares/saves/reposts exist for Stories, so
+  -- engagements/engagement_rate correctly compute to null ("Not
+  -- available"), never 0.
+  (null, '99999999-9999-4999-8999-000000000001', null, now() - interval '5 days', 'manual', 22000, 19000, null, null, null, null, null, null, 12, 180, 640, null, null, null),
+  (null, '99999999-9999-4999-8999-000000000002', null, now() - interval '5 days', 'manual', 19500, 17000, null, null, null, null, null, null, 9, 150, 720, null, null, null),
+  (null, '99999999-9999-4999-8999-000000000003', null, now() - interval '5 days', 'manual', 17800, 15500, null, null, null, null, null, null, 14, 210, 810, null, null, null)
+on conflict do nothing;
+
+-- Draft/review history for the Reel — a revision-requested v1 followed
+-- by an approved v2, proving old versions are kept, not destroyed.
+insert into content_submissions (
+  id, deliverable_id, version_number, content_url, caption, approval_status,
+  submitted_at, reviewed_at
+) values
+  ('99999999-9999-4999-8999-000000000021', '44444444-4444-4444-4444-444444444412', 1, 'https://drive.example/draft-v1', 'Draft cut — sunset cruise', 'revision_requested', now() - interval '9 days', now() - interval '8 days'),
+  ('99999999-9999-4999-8999-000000000022', '44444444-4444-4444-4444-444444444412', 2, 'https://instagram.com/reel/meridian-valentina-001', 'Final cut — sunset cruise', 'approved', now() - interval '7 days', now() - interval '7 days')
+on conflict (id) do nothing;

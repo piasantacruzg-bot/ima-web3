@@ -29,12 +29,16 @@ Phase 1 (foundation: schema, auth, navigation, dashboard), Phase 2
 notes, tags, saved filters, bulk actions, export, duplicate detection and
 merge), Phase 3 (CSV/XLSX import: column detection, normalization,
 deterministic duplicate matching, safe merge, historical-data preservation,
-and rollback), and Phase 4 (Campaign Management + Intelligent Creator
+and rollback), Phase 4 (Campaign Management + Intelligent Creator
 Selection: campaign wizard, deterministic creator matching with explained
 scores, shortlist/select/reject workflow, budget tracking, and automatic
-deliverable assignment) are complete. See `PHASE_1_SUMMARY.md`,
-`PHASE_2_SUMMARY.md`, `PHASE_3_SUMMARY.md`, and `PHASE_4_SUMMARY.md` for
-what's built and what's next.
+deliverable assignment), and Phase 5 (Campaign Execution, Deliverables,
+Content Tracker, Evidence & Metrics: per-Story-instance tracking, a content
+workflow state machine, manual metric entry with full history preservation,
+an evidence system, a Content Tracker UI, campaign dashboards/reports, and
+CSV/XLSX execution export) are complete. See `PHASE_1_SUMMARY.md`,
+`PHASE_2_SUMMARY.md`, `PHASE_3_SUMMARY.md`, `PHASE_4_SUMMARY.md`, and
+`PHASE_5_SUMMARY.md` for what's built and what's next.
 
 ## Tests
 
