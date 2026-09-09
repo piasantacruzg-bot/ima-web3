@@ -31,12 +31,15 @@ export interface SyncOutcome {
 }
 
 async function startLog(supabase: Supabase, provider: string, socialAccountId: string | null, syncType: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("integration_sync_logs")
     .insert({ provider, social_account_id: socialAccountId, sync_type: syncType, status: "running" })
     .select("id")
     .single();
-  return data!.id as string;
+  if (error || !data) {
+    throw new Error(`Could not start a sync log (${provider}/${syncType}): ${error?.message ?? "no row returned"}`);
+  }
+  return data.id as string;
 }
 
 async function finishLog(
