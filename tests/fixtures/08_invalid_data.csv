@@ -1,0 +1,4 @@
+Name,Email,Internal Rating,Brand Fit Score
+,not-an-email,9,150
+Valid Creator,valid@example.com,4,80
+Another Bad Row,another@example.com,0,-10

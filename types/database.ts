@@ -1,0 +1,809 @@
+// Hand-written types mirroring supabase/migrations/*.sql. Regenerate with
+// `supabase gen types typescript` once a real project is linked — these are
+// authored by hand so Phase 1 has full type safety without that dependency.
+
+export type UserRole = "admin" | "manager" | "member";
+export type CreatorType = "nano" | "micro" | "mid" | "macro" | "mega";
+export type CreatorStatus =
+  | "prospect"
+  | "approved"
+  | "active"
+  | "inactive"
+  | "do_not_work_with";
+export type SocialPlatform =
+  | "instagram"
+  | "tiktok"
+  | "x"
+  | "youtube"
+  | "facebook"
+  | "other";
+export type SocialAccountType = "personal" | "creator" | "business";
+export type OauthStatus = "not_connected" | "connected" | "expired" | "revoked" | "error";
+export type SyncStatus = "never_synced" | "syncing" | "synced" | "error" | "unsupported";
+export type CampaignStatus =
+  | "draft"
+  | "proposal"
+  | "approved"
+  | "recruiting"
+  | "active"
+  | "completed"
+  | "cancelled";
+export type CampaignCreatorStatus =
+  | "suggested"
+  | "shortlisted"
+  | "contacted"
+  | "negotiating"
+  | "approved"
+  | "contracted"
+  | "active"
+  | "completed"
+  | "removed"
+  | "declined"
+  | "not_available";
+// A creator not yet in `campaign_creators` is implicitly "recommended" —
+// the matching service computes that live, it's never a stored value here.
+export type CampaignCreatorSelectionStatus = "shortlisted" | "selected" | "rejected";
+export type PaymentStatus = "unpaid" | "invoiced" | "partial" | "paid";
+export type ContractStatus = "not_sent" | "sent" | "negotiating" | "signed" | "declined";
+export type BriefingStatus = "not_sent" | "sent" | "acknowledged" | "in_progress" | "complete";
+export type DeliverableContentType =
+  | "instagram_reel"
+  | "instagram_post"
+  | "instagram_carousel"
+  | "instagram_story"
+  | "tiktok"
+  | "x_post"
+  | "youtube_short"
+  | "youtube_video"
+  | "facebook_post"
+  | "other";
+export type DeliverableStatus =
+  | "not_started"
+  | "draft"
+  | "submitted"
+  | "needs_revision"
+  | "approved"
+  | "scheduled"
+  | "published"
+  | "late"
+  | "cancelled"
+  | "assigned"
+  | "brief"
+  | "in_review"
+  | "metrics_collected";
+export type CollectionMethod = "api" | "url_import" | "manual" | "screenshot";
+export type MetricSource = "api" | "manual" | "screenshot" | "imported" | "url";
+export type EvidenceType = "public_url" | "screenshot" | "uploaded_file" | "google_drive" | "other";
+export type SubmissionApprovalStatus = "pending" | "approved" | "revision_requested" | "rejected";
+// Which denominator produced an engagement_rate snapshot — never mixed
+// silently across snapshots (spec section 13).
+export type EngagementRateMethod = "reach" | "impressions" | "followers";
+export type ImportFileType = "csv" | "xlsx";
+export type ImportBatchStatus =
+  | "uploaded"
+  | "mapped"
+  | "previewed"
+  | "importing"
+  | "completed"
+  | "failed";
+export type ImportRowStatus =
+  | "pending"
+  | "imported"
+  | "duplicate"
+  | "error"
+  | "skipped"
+  | "existing"
+  | "ignored";
+export type ImportRowAction = "create" | "update" | "merge" | "keep_separate" | "skip" | "ignore";
+export type DuplicateResolution = "unresolved" | "merged" | "kept_separate";
+
+export type Profile = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Creator = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string;
+  profile_image_url: string | null;
+  email: string | null;
+  phone: string | null;
+  country: string | null;
+  city: string | null;
+  state_province: string | null;
+  languages: string[];
+  gender: string | null;
+  categories: string[];
+  niches: string[];
+  creator_type: CreatorType | null;
+  status: CreatorStatus;
+  bio: string | null;
+  notes: string | null;
+  manager_name: string | null;
+  manager_email: string | null;
+  agency_name: string | null;
+  rate_card_notes: string | null;
+  brand_fit_score: number | null;
+  internal_rating: number | null;
+  is_demo: boolean;
+  archived_at: string | null;
+  custom_fields: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SocialAccount = {
+  id: string;
+  creator_id: string;
+  platform: SocialPlatform;
+  username: string;
+  profile_url: string | null;
+  platform_user_id: string | null;
+  followers: number | null;
+  following: number | null;
+  posts_count: number | null;
+  engagement_rate: number | null;
+  average_likes: number | null;
+  average_comments: number | null;
+  average_views: number | null;
+  average_shares: number | null;
+  average_saves: number | null;
+  estimated_reach: number | null;
+  account_type: SocialAccountType | null;
+  is_connected: boolean;
+  oauth_status: OauthStatus;
+  access_token_reference: string | null;
+  token_expires_at: string | null;
+  last_synced_at: string | null;
+  sync_status: SyncStatus;
+  sync_error: string | null;
+  is_demo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreatorPerformanceSnapshot = {
+  id: string;
+  creator_id: string;
+  social_account_id: string | null;
+  campaign_id: string | null;
+  content_id: string | null;
+  import_id: string | null;
+  snapshot_date: string;
+  followers: number | null;
+  reach: number | null;
+  impressions: number | null;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  saves: number | null;
+  clicks: number | null;
+  engagements: number | null;
+  engagement_rate: number | null;
+  cpm: number | null;
+  cpe: number | null;
+  cost_per_reach: number | null;
+  created_at: string;
+}
+
+export type TargetAudience = {
+  age_range?: string;
+  gender?: string;
+  locations?: string[];
+  interests?: string[];
+  languages?: string[];
+}
+
+export type CreatorRequirements = {
+  min_followers?: number;
+  max_followers?: number;
+  min_engagement?: number;
+  max_engagement?: number;
+  min_average_views?: number;
+  max_average_views?: number;
+  min_brand_fit?: number;
+  min_rating?: number;
+  creator_types?: CreatorType[];
+  categories?: string[];
+  locations?: string[];
+  languages?: string[];
+  // Overrides the default "approved/active only" recommendation rule
+  // (spec section 8) — never includes "do_not_work_with" unless a human
+  // explicitly adds it here.
+  allowed_statuses?: CreatorStatus[];
+  budget_per_creator?: number;
+  creator_count?: number;
+}
+
+// Per-campaign override of the default matching weights (spec section 15).
+// Missing keys fall back to the system default for that criterion — an
+// empty object means "use all defaults."
+export type MatchingWeights = {
+  platform?: number;
+  category?: number;
+  location?: number;
+  followers?: number;
+  engagement?: number;
+  views?: number;
+  brandFit?: number;
+  rating?: number;
+  historicalPerformance?: number;
+  costEfficiency?: number;
+}
+
+export type Campaign = {
+  id: string;
+  campaign_name: string;
+  client_name: string;
+  brand_name: string | null;
+  description: string | null;
+  market: string | null;
+  country: string | null;
+  city: string | null;
+  campaign_type: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  budget: number | null;
+  status: CampaignStatus;
+  // Free-text objective notes (structured objectives live in
+  // primary_objective / secondary_objectives below).
+  campaign_objectives: string | null;
+  primary_objective: string | null;
+  secondary_objectives: string[];
+  language: string[];
+  target_audience: TargetAudience;
+  target_categories: string[];
+  target_platforms: SocialPlatform[];
+  creator_requirements: CreatorRequirements;
+  matching_weights: MatchingWeights;
+  creator_budget: number | null;
+  production_budget: number | null;
+  paid_media_budget: number | null;
+  agency_fee: number | null;
+  other_budget: number | null;
+  // Campaign-specific exclusions — never mutate the creator database.
+  excluded_creator_ids: string[];
+  excluded_categories: string[];
+  excluded_locations: string[];
+  notes: string | null;
+  owner_id: string | null;
+  archived_at: string | null;
+  is_demo: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CampaignCreator = {
+  id: string;
+  campaign_id: string;
+  creator_id: string;
+  status: CampaignCreatorStatus;
+  selection_status: CampaignCreatorSelectionStatus | null;
+  negotiated_fee: number | null;
+  approved_fee: number | null;
+  proposed_fee: number | null;
+  currency: string | null;
+  fee_type: string | null;
+  payment_status: PaymentStatus;
+  contract_status: ContractStatus;
+  briefing_status: BriefingStatus;
+  match_score: number | null;
+  match_reasons: string[];
+  match_breakdown: Record<string, number>;
+  notes: string | null;
+  added_by: string | null;
+  added_at: string;
+  selected_at: string | null;
+  removed_at: string | null;
+  updated_at: string;
+}
+
+export type CampaignDeliverableTemplate = {
+  id: string;
+  campaign_id: string;
+  platform: SocialPlatform;
+  content_type: DeliverableContentType;
+  quantity: number;
+  default_due_date: string | null;
+  instructions: string | null;
+  usage_rights: string | null;
+  paid_media_rights: boolean;
+  exclusivity_requirements: string | null;
+  approval_required: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
+export type CampaignTemplate = {
+  id: string;
+  name: string;
+  description: string | null;
+  campaign_type: string | null;
+  default_objectives: Record<string, unknown>;
+  default_requirements: CreatorRequirements;
+  default_deliverables: Record<string, unknown>[];
+  default_matching_weights: MatchingWeights;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Deliverable = {
+  id: string;
+  campaign_id: string;
+  creator_id: string;
+  campaign_creator_id: string | null;
+  template_id: string | null;
+  platform: SocialPlatform;
+  content_type: DeliverableContentType;
+  title: string | null;
+  description: string | null;
+  quantity: number;
+  due_date: string | null;
+  status: DeliverableStatus;
+  instructions: string | null;
+  caption_required: boolean;
+  approval_required: boolean;
+  usage_rights: string | null;
+  paid_media_rights: boolean;
+  exclusivity: string | null;
+  published_url: string | null;
+  published_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// One Story deliverable with quantity 3 becomes three of these — each
+// independently trackable (own status, evidence, metrics), never a shared
+// record (spec sections 6-7).
+export type StoryInstance = {
+  id: string;
+  deliverable_id: string;
+  sequence_number: number;
+  status: DeliverableStatus;
+  published_at: string | null;
+  content_url: string | null;
+  caption: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ContentPost = {
+  id: string;
+  campaign_id: string;
+  creator_id: string;
+  campaign_creator_id: string | null;
+  deliverable_id: string | null;
+  social_account_id: string | null;
+  platform: SocialPlatform;
+  content_type: DeliverableContentType;
+  post_url: string;
+  platform_post_id: string | null;
+  thumbnail_url: string | null;
+  caption: string | null;
+  published_at: string | null;
+  collection_method: CollectionMethod;
+  sync_status: SyncStatus;
+  sync_error: string | null;
+  last_synced_at: string | null;
+  content_status: ContentStatus;
+  unavailable_detected_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Belongs to exactly one of content_id / story_instance_id / deliverable_id
+// — the most granular relationship available (spec section 9). A snapshot
+// is never overwritten; every capture is a new row (captured_at).
+export type ContentMetrics = {
+  id: string;
+  content_id: string | null;
+  story_instance_id: string | null;
+  deliverable_id: string | null;
+  captured_at: string;
+  source: MetricSource;
+  views: number | null;
+  reach: number | null;
+  impressions: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  reposts: number | null;
+  saves: number | null;
+  clicks: number | null;
+  replies: number | null;
+  engagements: number | null;
+  engagement_rate: number | null;
+  engagement_rate_method: EngagementRateMethod | null;
+  watch_time: number | null;
+  average_watch_time: number | null;
+  completion_rate: number | null;
+  link_clicks: number | null;
+  website_clicks: number | null;
+  cta_clicks: number | null;
+  sticker_taps: number | null;
+  forward_taps: number | null;
+  back_taps: number | null;
+  exits: number | null;
+  video_starts: number | null;
+  three_second_views: number | null;
+  other_metrics: Record<string, unknown>;
+  is_estimated: boolean;
+  captured_by: string | null;
+  created_at: string;
+}
+
+// Proof a deliverable/content/Story was actually produced — independent of
+// whether it has a public URL (spec section 14/29: a Story is never
+// "incomplete" merely for lacking one).
+export type ContentEvidence = {
+  id: string;
+  deliverable_id: string | null;
+  content_post_id: string | null;
+  story_instance_id: string | null;
+  evidence_type: EvidenceType;
+  file_url: string | null;
+  storage_path: string | null;
+  screenshot_url: string | null;
+  drive_file_id: string | null;
+  drive_folder_id: string | null;
+  drive_url: string | null;
+  filename: string | null;
+  captured_at: string | null;
+  uploaded_at: string;
+  uploaded_by: string | null;
+  notes: string | null;
+}
+
+// Draft/revision versioning (spec section 19) — never destroyed, so the
+// review history stays intact.
+export type ContentSubmission = {
+  id: string;
+  deliverable_id: string;
+  story_instance_id: string | null;
+  version_number: number;
+  file_url: string | null;
+  storage_path: string | null;
+  content_url: string | null;
+  caption: string | null;
+  thumbnail_url: string | null;
+  notes: string | null;
+  approval_status: SubmissionApprovalStatus;
+  submitted_at: string;
+  submitted_by: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+// Architecture-only (spec section 35) — a row here never triggers an email
+// or push notification on its own; that's future-phase wiring.
+// `type` stays free text (not an enum) matching audit_log.action's own
+// convention — the values below are the ones this app writes, not a
+// closed set enforced by the database.
+export type NotificationType =
+  | "deliverable_due"
+  | "deliverable_overdue"
+  | "content_submitted"
+  | "revision_requested"
+  | "content_approved"
+  | "content_published"
+  | "metrics_missing"
+  | "evidence_missing"
+  | "sync_failed"
+  | "connection_expired";
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  campaign_id: string | null;
+  creator_id: string | null;
+  deliverable_id: string | null;
+  content_post_id: string | null;
+  read_at: string | null;
+  created_at: string;
+  email_sent_at: string | null;
+  email_error: string | null;
+}
+
+export type ContentStatus = "active" | "unavailable";
+
+// Ciphertext only — lib/integrations/token-store.ts encrypts/decrypts
+// server-side; a plaintext token never reaches this table or the browser.
+export type IntegrationToken = {
+  id: string;
+  provider: string;
+  social_account_id: string | null;
+  access_token_encrypted: string | null;
+  refresh_token_encrypted: string | null;
+  expires_at: string | null;
+  scopes: string[];
+  connected_by: string | null;
+  connected_at: string;
+  last_refreshed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SyncStatusValue = "running" | "completed" | "partial" | "failed";
+
+export type IntegrationSyncLog = {
+  id: string;
+  provider: string;
+  social_account_id: string | null;
+  sync_type: string;
+  started_at: string;
+  completed_at: string | null;
+  status: SyncStatusValue;
+  records_found: number;
+  records_created: number;
+  records_updated: number;
+  records_skipped: number;
+  records_failed: number;
+  error_message: string | null;
+  created_at: string;
+}
+
+export type MatchStatus = "pending" | "confirmed" | "ignored";
+
+export interface DiscoveredContentCandidate {
+  deliverableId: string;
+  campaignId: string;
+  campaignName: string;
+  confidence: number;
+}
+
+// Holds a discovered post between a sync run and a human decision — an
+// ambiguous or unmatched match is never auto-assigned (spec section 14).
+export type DiscoveredContent = {
+  id: string;
+  provider: string;
+  platform: SocialPlatform;
+  platform_post_id: string;
+  post_url: string;
+  published_at: string | null;
+  social_account_id: string | null;
+  creator_id: string | null;
+  candidates: DiscoveredContentCandidate[];
+  match_status: MatchStatus;
+  resolved_deliverable_id: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+}
+
+export type AutomationRule = {
+  id: string;
+  rule_key: string;
+  name: string;
+  description: string | null;
+  is_enabled: boolean;
+  config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export type StoryMetrics = {
+  id: string;
+  creator_id: string;
+  campaign_id: string | null;
+  social_account_id: string | null;
+  deliverable_id: string | null;
+  screenshot_url: string | null;
+  story_date: string;
+  story_sequence: number;
+  views: number | null;
+  reach: number | null;
+  replies: number | null;
+  link_clicks: number | null;
+  sticker_taps: number | null;
+  exits: number | null;
+  other_metrics: Record<string, unknown>;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ImportBatch = {
+  id: string;
+  source_filename: string;
+  file_type: ImportFileType;
+  status: ImportBatchStatus;
+  column_mapping: Record<string, string>;
+  storage_path: string | null;
+  total_rows: number;
+  imported_rows: number;
+  duplicate_rows: number;
+  error_rows: number;
+  error_message: string | null;
+  uploaded_by: string | null;
+  source_name: string | null;
+  new_creators: number;
+  existing_creators: number;
+  potential_duplicates: number;
+  new_social_accounts: number;
+  updated_fields: number;
+  started_at: string | null;
+  rolled_back_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export type ImportRow = {
+  id: string;
+  batch_id: string;
+  row_number: number;
+  source_sheet: string | null;
+  raw_data: Record<string, unknown>;
+  normalized_data: Record<string, unknown> | null;
+  status: ImportRowStatus;
+  possible_duplicate_creator_id: string | null;
+  duplicate_resolution: DuplicateResolution;
+  match_confidence: number | null;
+  match_reasons: string[];
+  warnings: string[];
+  action: ImportRowAction | null;
+  processed_at: string | null;
+  previous_creator_snapshot: Record<string, unknown> | null;
+  error_message: string | null;
+  created_creator_id: string | null;
+  created_at: string;
+}
+
+export type AuditLogEntry = {
+  id: string;
+  user_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  previous_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export type AppSettings = {
+  id: number;
+  agency_name: string;
+  agency_logo_url: string | null;
+  default_currency: string;
+  default_campaign_settings: Record<string, unknown>;
+  report_settings: Record<string, unknown>;
+  sync_frequency_hours: number;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export type CreatorScoringWeights = {
+  id: number;
+  engagement_weight: number;
+  avg_views_weight: number;
+  historical_performance_weight: number;
+  audience_fit_weight: number;
+  brand_fit_weight: number;
+  cost_efficiency_weight: number;
+  reliability_weight: number;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export type CreatorWithStats = Creator & {
+  max_followers: number;
+  avg_engagement_rate: number;
+  max_average_views: number;
+  max_average_likes: number;
+  max_average_comments: number;
+  max_average_shares: number;
+  max_estimated_reach: number;
+  campaign_count: number;
+  platforms: SocialPlatform[] | null;
+  tags: string[] | null;
+  primary_platform: SocialPlatform | null;
+  primary_username: string | null;
+};
+
+export type CreatorNote = {
+  id: string;
+  creator_id: string;
+  body: string;
+  author_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreatorTag = {
+  id: string;
+  name: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type CreatorTagAssignment = {
+  id: string;
+  creator_id: string;
+  tag_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+};
+
+export type SavedCreatorFilter = {
+  id: string;
+  name: string;
+  user_id: string;
+  filter_config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type TableDef<Row> = {
+  Row: Row;
+  Insert: Partial<Row>;
+  Update: Partial<Row>;
+  Relationships: [];
+};
+
+export type Database = {
+  public: {
+    Tables: {
+      profiles: TableDef<Profile>;
+      creators: TableDef<Creator>;
+      social_accounts: TableDef<SocialAccount>;
+      creator_performance_snapshots: TableDef<CreatorPerformanceSnapshot>;
+      campaigns: TableDef<Campaign>;
+      campaign_creators: TableDef<CampaignCreator>;
+      campaign_deliverable_templates: TableDef<CampaignDeliverableTemplate>;
+      campaign_templates: TableDef<CampaignTemplate>;
+      deliverables: TableDef<Deliverable>;
+      story_instances: TableDef<StoryInstance>;
+      content_posts: TableDef<ContentPost>;
+      content_metrics: TableDef<ContentMetrics>;
+      content_evidence: TableDef<ContentEvidence>;
+      content_submissions: TableDef<ContentSubmission>;
+      notifications: TableDef<Notification>;
+      integration_tokens: TableDef<IntegrationToken>;
+      integration_sync_logs: TableDef<IntegrationSyncLog>;
+      automation_rules: TableDef<AutomationRule>;
+      discovered_content: TableDef<DiscoveredContent>;
+      story_metrics: TableDef<StoryMetrics>;
+      import_batches: TableDef<ImportBatch>;
+      import_rows: TableDef<ImportRow>;
+      audit_log: TableDef<AuditLogEntry>;
+      app_settings: TableDef<AppSettings>;
+      creator_scoring_weights: TableDef<CreatorScoringWeights>;
+      creator_notes: TableDef<CreatorNote>;
+      creator_tags: TableDef<CreatorTag>;
+      creator_tag_assignments: TableDef<CreatorTagAssignment>;
+      saved_creator_filters: TableDef<SavedCreatorFilter>;
+    };
+    Views: {
+      creators_with_stats: { Row: CreatorWithStats; Relationships: [] };
+      content_metrics_latest: { Row: ContentMetrics; Relationships: [] };
+    };
+    Functions: { [_ in never]: never };
+    Enums: {
+      user_role: UserRole;
+      creator_type: CreatorType;
+      creator_status: CreatorStatus;
+      social_platform: SocialPlatform;
+      campaign_status: CampaignStatus;
+      deliverable_status: DeliverableStatus;
+    };
+  };
+}

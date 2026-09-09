@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+@layer base {
+  body {
+    @apply bg-paper text-ink antialiased;
+  }
+  ::selection {
+    @apply bg-brand-accent/20;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-md border border-line bg-paper-raised shadow-card;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-ink px-4 py-2 text-sm font-medium text-paper-raised transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-line bg-paper-raised px-4 py-2 text-sm font-medium text-ink transition hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .input {
+    @apply w-full rounded-sm border border-line bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-soft/40 focus:border-ink/40 focus:outline-none focus:ring-1 focus:ring-ink/20;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-ink-soft;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-xs font-medium;
+  }
 }
