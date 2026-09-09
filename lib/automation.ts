@@ -73,8 +73,8 @@ async function createNotificationIfNew(supabase: Supabase, input: CreateNotifica
   result.notificationsCreated += 1;
 }
 
-export async function runAutomationRules(): Promise<AutomationRunResult> {
-  const supabase = await createClient();
+export async function runAutomationRules(supabaseOverride?: Supabase): Promise<AutomationRunResult> {
+  const supabase = supabaseOverride ?? (await createClient());
   const result: AutomationRunResult = { notificationsCreated: 0, notificationsSkippedDuplicate: 0 };
   const managerIds = await getManagerUserIds(supabase);
 

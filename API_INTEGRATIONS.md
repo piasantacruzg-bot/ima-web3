@@ -117,14 +117,45 @@ auto-assigned.
 | **YouTube** | Google Cloud project, YouTube Data API v3 enabled, OAuth consent screen | Public video statistics (views/likes/comments) are available without the channel owner's consent; watch time / audience retention require the channel owner to authorize. |
 | **Google Drive** | Separate Google Cloud OAuth client (own `GOOGLE_DRIVE_*` credentials, `drive.file` scope) | Story evidence only — falls back to Supabase Storage automatically when not connected; campaign execution never blocks on it. |
 
-## Scheduled sync (Phase 7+)
+## Scheduled sync
 
-Spec section 19 explicitly doesn't require background jobs where the
-hosting environment doesn't support them yet — this app has no cron
-infrastructure, so sync is manual-trigger only today (`/settings/integrations`'s
-"Sync now" / "Sync all connected accounts", and each campaign's
-"Sync now"). `app_settings.sync_frequency_hours` is read by
-`getCampaignAutomationSummary` to compute an informational "next sync
-would be due" timestamp, but nothing actually schedules that run. Wiring
-a real cron (e.g. a Vercel Cron Job or Supabase Edge Function calling
-`syncCampaignContent` per active campaign) is the natural Phase 7 task.
+Manual sync still works everywhere it always did
+(`/settings/integrations`'s "Sync now" / "Sync all connected accounts",
+and each campaign's "Sync now") — scheduled sync only adds an automatic
+path on top, it doesn't replace the manual one.
+
+`GET /api/cron/sync` (`app/api/cron/sync/route.ts`) is the real job: it
+runs on the service-role client (no user session exists in a cron
+context, so it can't use the cookie-based `createClient()` everything
+else in the app uses — see `lib/supabase/server.ts`'s
+`createServiceRoleClient()`). For every non-archived campaign with
+`status = 'active'`, it checks whether the campaign is due — the exact
+same last-sync + `app_settings.sync_frequency_hours` calculation
+`getCampaignAutomationSummary` already exposes as "next sync" in the UI
+(`lib/integrations-status.ts`'s `isSyncDue`) — and if so calls
+`syncCampaignContent`. It then runs `runAutomationRules()` once so
+missing-metrics/evidence/overdue/expired-connection notifications reflect
+the sync it just did, and records one `scheduled_sync_executed` audit_log
+row summarizing the run. A campaign with no connected platforms is
+skipped rather than generating empty sync log rows every hour.
+
+**The route itself doesn't require any particular host** — anything that
+can call an authenticated HTTPS URL on a schedule can trigger it (a
+GitHub Actions scheduled workflow, Supabase's `pg_cron` + `pg_net`, an
+external uptime-style pinger). `vercel.json`'s `crons` entry wires it up
+for Vercel specifically, hitting `/api/cron/sync` hourly — that's the
+finest-grained check the route needs, since `sync_frequency_hours` is
+read per-campaign inside the route rather than baked into the cron
+schedule itself. Two things to know if deploying there: Vercel's Hobby
+plan only allows daily (not hourly) cron invocations — on Hobby, edit
+`vercel.json`'s schedule to `0 0 * * *` and expect "next sync" to lag by
+up to a day; and cron jobs only run once a project is deployed to
+production, not in preview deployments.
+
+**Authorization**: the route checks the request's `Authorization` header
+against `CRON_SECRET` (see `.env.example`) and returns 401 without it —
+without `CRON_SECRET` set, scheduled sync silently never runs (manual
+sync is unaffected). On Vercel, setting `CRON_SECRET` also makes Vercel
+automatically send it as `Authorization: Bearer <value>` on its own cron
+invocations, so no extra wiring is needed there beyond setting the env
+var.

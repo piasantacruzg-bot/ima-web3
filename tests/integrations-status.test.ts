@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { summarizePlatformStatus, type AccountStatusInput } from "@/lib/integrations-status";
+import { summarizePlatformStatus, isSyncDue, type AccountStatusInput } from "@/lib/integrations-status";
 
 function account(overrides: Partial<AccountStatusInput> = {}): AccountStatusInput {
   return { oauth_status: "not_connected", sync_status: "never_synced", ...overrides };
@@ -32,5 +32,25 @@ describe("summarizePlatformStatus", () => {
   it("treats a connected account with a failing sync as not fully healthy", () => {
     const accounts = [account({ oauth_status: "connected", sync_status: "error" }), account({ oauth_status: "connected", sync_status: "synced" })];
     expect(summarizePlatformStatus(accounts)).toBe("partial");
+  });
+});
+
+describe("isSyncDue", () => {
+  const now = new Date("2026-09-09T12:00:00Z");
+
+  it("is due when there is no next-sync timestamp (never synced)", () => {
+    expect(isSyncDue(null, now)).toBe(true);
+  });
+
+  it("is due once the next-sync timestamp has passed", () => {
+    expect(isSyncDue("2026-09-09T11:59:59Z", now)).toBe(true);
+  });
+
+  it("is due exactly at the next-sync timestamp", () => {
+    expect(isSyncDue("2026-09-09T12:00:00Z", now)).toBe(true);
+  });
+
+  it("is not due before the next-sync timestamp", () => {
+    expect(isSyncDue("2026-09-09T12:00:01Z", now)).toBe(false);
   });
 });

@@ -97,8 +97,12 @@ async function insertMetricSnapshot(
 // every content_post tied to this account (new and pre-existing alike).
 // Pass `adapterOverride` to exercise this against a mock provider in
 // tests without ever touching the real adapter registry.
-export async function syncSocialAccount(socialAccountId: string, adapterOverride?: SocialPlatformAdapter): Promise<SyncOutcome> {
-  const supabase = await createClient();
+export async function syncSocialAccount(
+  socialAccountId: string,
+  adapterOverride?: SocialPlatformAdapter,
+  supabaseOverride?: Supabase
+): Promise<SyncOutcome> {
+  const supabase = supabaseOverride ?? (await createClient());
   const { data: account } = await supabase.from("social_accounts").select("*").eq("id", socialAccountId).maybeSingle();
   if (!account) {
     const logId = await startLog(supabase, "unknown", socialAccountId, "account");
@@ -259,8 +263,12 @@ export async function syncSocialAccount(socialAccountId: string, adapterOverride
   return { logId, provider: account.platform, syncType: "account", ...outcome };
 }
 
-export async function syncContentMetrics(contentPostId: string, adapterOverride?: SocialPlatformAdapter): Promise<SyncOutcome> {
-  const supabase = await createClient();
+export async function syncContentMetrics(
+  contentPostId: string,
+  adapterOverride?: SocialPlatformAdapter,
+  supabaseOverride?: Supabase
+): Promise<SyncOutcome> {
+  const supabase = supabaseOverride ?? (await createClient());
   const { data: post } = await supabase.from("content_posts").select("*").eq("id", contentPostId).maybeSingle();
   if (!post || !post.social_account_id || !post.platform_post_id) {
     const logId = await startLog(supabase, post?.platform ?? "unknown", post?.social_account_id ?? null, "metrics");
@@ -292,18 +300,18 @@ export async function syncContentMetrics(contentPostId: string, adapterOverride?
   return { logId, provider: post.platform, syncType: "metrics", ...outcome };
 }
 
-export async function syncCreatorContent(creatorId: string): Promise<SyncOutcome[]> {
-  const supabase = await createClient();
+export async function syncCreatorContent(creatorId: string, supabaseOverride?: Supabase): Promise<SyncOutcome[]> {
+  const supabase = supabaseOverride ?? (await createClient());
   const { data: accounts } = await supabase.from("social_accounts").select("id").eq("creator_id", creatorId);
   const outcomes: SyncOutcome[] = [];
   for (const account of accounts ?? []) {
-    outcomes.push(await syncSocialAccount(account.id));
+    outcomes.push(await syncSocialAccount(account.id, undefined, supabase));
   }
   return outcomes;
 }
 
-export async function syncCampaignContent(campaignId: string): Promise<SyncOutcome[]> {
-  const supabase = await createClient();
+export async function syncCampaignContent(campaignId: string, supabaseOverride?: Supabase): Promise<SyncOutcome[]> {
+  const supabase = supabaseOverride ?? (await createClient());
   const { data: campaignCreators } = await supabase.from("campaign_creators").select("creator_id").eq("campaign_id", campaignId);
   const creatorIds = [...new Set((campaignCreators ?? []).map((cc) => cc.creator_id))];
   if (creatorIds.length === 0) return [];
@@ -311,7 +319,7 @@ export async function syncCampaignContent(campaignId: string): Promise<SyncOutco
   const { data: accounts } = await supabase.from("social_accounts").select("id").in("creator_id", creatorIds);
   const outcomes: SyncOutcome[] = [];
   for (const account of accounts ?? []) {
-    outcomes.push(await syncSocialAccount(account.id));
+    outcomes.push(await syncSocialAccount(account.id, undefined, supabase));
   }
   return outcomes;
 }

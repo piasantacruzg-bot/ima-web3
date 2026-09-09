@@ -4,6 +4,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { OauthStatus, SyncStatus, SocialPlatform } from "@/types/database";
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
 import { isInstagramConfigured } from "@/lib/integrations/instagram/oauth";
 import { isTikTokConfigured } from "@/lib/integrations/tiktok/oauth";
 import { isXConfigured } from "@/lib/integrations/x/oauth";
@@ -129,12 +131,12 @@ export interface CampaignAutomationSummary {
   syncErrors: number;
 }
 
-// "Next sync" is informational only — no cron/background job runs it in
-// this environment (spec section 19 explicitly allows that); it's just
-// last sync + the configured interval, so the UI can say when a sync
-// would next be due if one were scheduled.
-export async function getCampaignAutomationSummary(campaignId: string): Promise<CampaignAutomationSummary> {
-  const supabase = await createClient();
+// "Next sync" reflects last sync + the configured interval
+// (app_settings.sync_frequency_hours) — used both as an informational
+// display and, via isSyncDue below, as the real gate the scheduled sync
+// cron route (/api/cron/sync) uses to decide which campaigns to sync.
+export async function getCampaignAutomationSummary(campaignId: string, supabaseOverride?: Supabase): Promise<CampaignAutomationSummary> {
+  const supabase = supabaseOverride ?? (await createClient());
   const { data: campaignCreators } = await supabase.from("campaign_creators").select("creator_id").eq("campaign_id", campaignId);
   const creatorIds = [...new Set((campaignCreators ?? []).map((c) => c.creator_id))];
   if (creatorIds.length === 0) {
@@ -165,4 +167,12 @@ export async function getCampaignAutomationSummary(campaignId: string): Promise<
   const syncErrors = (logs ?? []).filter((l) => l.status === "failed").length;
 
   return { connectedPlatforms, lastSyncAt, nextSyncAt, contentDiscovered, metricsUpdated, syncErrors };
+}
+
+// Pure gate the scheduled sync cron route uses to decide whether a
+// campaign's next sync is due yet: no nextSyncAt means it has never been
+// synced, which counts as due immediately.
+export function isSyncDue(nextSyncAt: string | null, now: Date = new Date()): boolean {
+  if (!nextSyncAt) return true;
+  return new Date(nextSyncAt).getTime() <= now.getTime();
 }
