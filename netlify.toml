@@ -1,0 +1,12 @@
+# Netlify deploys the Brief&Co. site, which lives in brief-and-co/.
+# (The IMA WEB3 reporting app at the repo root is deployed separately.)
+# Netlify detects Next.js and adds its Next.js runtime automatically,
+# so the middleware (EN/ES redirects) and /api/contact work as-is.
+
+[build]
+  base = "brief-and-co"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"

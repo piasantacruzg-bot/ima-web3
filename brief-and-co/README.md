@@ -8,6 +8,8 @@ Next.js 14 (App Router) + TypeScript + plain CSS. No UI library.
 
 This is its own app, separate from the IMA WEB3 reporting tool at the repo root.
 
+Deploying to Netlify: see [DEPLOY-NETLIFY.md](DEPLOY-NETLIFY.md) (in Spanish).
+
 ## Run it
 
 ```bash
